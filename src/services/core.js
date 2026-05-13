@@ -1,6 +1,7 @@
 export {
   fetchCases,
   fetchChecklist,
+  reconcileChecklistTemplate,
   updateCaseStatus,
   updateChecklist,
 } from './cases'

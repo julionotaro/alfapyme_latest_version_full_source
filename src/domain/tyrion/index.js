@@ -15,6 +15,7 @@ export {
 } from './human-review-rules'
 export { detectMockDocumentType } from './mock-classifier'
 export { evaluateExpedient } from './validation-rules'
+export { projectChecklistFromRequirement } from './checklist-projection'
 export {
   DEFAULT_WORKFLOW_TEMPLATE,
   WORKFLOW_TEMPLATES,

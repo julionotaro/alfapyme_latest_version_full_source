@@ -27,8 +27,16 @@ Se incorporó una capa inicial reusable en `src/domain/tyrion/`:
 - validaciones cruzadas profundas
 - coherencia entre documentos
 - validaciones fiscales/DGT reales
-- integración profunda con checklist persistente en la UI/DB
 - edición/configuración administrativa de plantillas por cliente
+
+## Estado actual de la unificación UI + Tyrion + DB
+- el frontend ya no depende solo de una proyección efímera del checklist
+- al abrir un caso, `reconcileChecklistTemplate(...)` materializa en `case_document_checklist` los ítems requeridos/recomendados derivados de la plantilla activa
+- la ruta preferente ahora es una RPC SQL (`reconcile_case_checklist`) para que la reconciliación quede controlada también desde Supabase y no solo desde el cliente
+- si esa RPC todavía no está aplicada en el entorno, el frontend cae de forma compatible a una reconciliación cliente temporal
+- si entra documentación nueva, la reconciliación actualiza `status`, `validation_status` y `document_id` del ítem persistido correspondiente
+- luego la UI sigue proyectando sobre esa base persistida para conservar compatibilidad con extras/manuales fuera de plantilla
+- se registra auditoría con `checklist_template_reconciled`
 
 ## Siguiente paso recomendado
 Conectar esta capa templatable con:

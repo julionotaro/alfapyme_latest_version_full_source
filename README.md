@@ -52,6 +52,8 @@ npm run build
 Ejecutar en Supabase:
 - `supabase/ops_incremental.sql`
 
+Ese SQL ahora incluye también la RPC `reconcile_case_checklist(uuid, jsonb)` para persistir en DB el checklist derivado por plantilla.
+
 ## Estado honesto
 La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP:
 - hay simulación en clasificación/OCR/confianza

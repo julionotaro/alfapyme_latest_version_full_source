@@ -79,10 +79,11 @@ export function WorkspaceView({
               <b>{item.document_label}</b>
               <small>
                 {item.is_blocking ? 'Bloqueante' : 'No bloqueante'} · {item.status} · {item.validation_status}
+                {item.source === 'template' ? ' · derivado de plantilla' : ''}
               </small>
             </div>
 
-            {item.document_id && item.validation_status !== 'validated' && (
+            {item.document_id && item.validation_status !== 'validated' && item.source !== 'template' && (
               <button onClick={() => onValidateItem(item)}>Validar</button>
             )}
           </div>

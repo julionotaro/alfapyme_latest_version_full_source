@@ -4,11 +4,12 @@ import {
   fetchChecklist,
   fetchDocuments,
   getDocumentSignedUrl,
+  reconcileChecklistTemplate,
   updateCaseStatus,
   updateChecklist,
   uploadDocument,
 } from './services/core'
-import { evaluateExpedient, resolveWorkflowTransition } from './domain/tyrion'
+import { evaluateExpedient, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion'
 import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
 import { FlashMessage } from './components/FlashMessage'
@@ -50,13 +51,26 @@ export default function App() {
       const items = await fetchChecklist(caseId)
       const currentCase = cases.find((item) => item.id === caseId) || selected
       setDocuments(docs)
-      setChecklist(items)
-      setActiveDoc((current) => current || docs[0] || null)
       if (currentCase) {
         const assessment = evaluateExpedient({ caseData: currentCase, documents: docs })
+        const reconciledItems = await reconcileChecklistTemplate({
+          caseData: currentCase,
+          documents: docs,
+          checklist: items,
+        })
+        const projectedChecklist = projectChecklistFromRequirement({
+          requirement: assessment.requirement,
+          checklist: reconciledItems,
+          documents: docs,
+        })
+
+        setChecklist(projectedChecklist)
         setTyrionAssessment(assessment)
         setTyrionTransition(resolveWorkflowTransition({ caseData: currentCase, assessment }))
+      } else {
+        setChecklist(items)
       }
+      setActiveDoc((current) => current || docs[0] || null)
     } catch (error) {
       setMessage(error.message)
     }
@@ -92,6 +106,11 @@ export default function App() {
   )
 
   async function validateItem(item) {
+    if (!item?.id || String(item.id).startsWith('required:') || String(item.id).startsWith('recommended:')) {
+      setMessage('Este ítem aún no existe en base de datos. Valida primero el documento real asociado.')
+      return
+    }
+
     await updateChecklist(item.id, {
       status: 'validated',
       validation_status: 'validated',
