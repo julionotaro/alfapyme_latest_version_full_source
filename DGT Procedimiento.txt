@@ -1,0 +1,426 @@
+TRÁMITES DGT – GUÍA PROFESIONAL PARA GESTORES ADMINISTRATIVOS
+
+Versión completa – Formato texto tipo PDF
+
+🧩 PORTADA
+
+TRÁMITES DGT – GUÍA PROFESIONAL PARA GESTORES ADMINISTRATIVOSManual operativo completoColegio de Gestores AdministrativosEdición 2026
+
+📑 ÍNDICE
+
+Introducción
+
+Arquitectura del sistema DGT–Colegio–Gestoría
+
+Reglas de negocio generales
+
+Validaciones automáticas SITEX/REGWEB
+
+Trámites
+
+A. Matriculaciones
+
+B. Cambios de titularidad
+
+C. Documentación del vehículo
+
+D. Bajas
+
+E. Informes
+
+F. Distintivos
+
+G. Internacionales
+
+1. INTRODUCCIÓN
+
+Este manual recoge todos los trámites que los Gestores Administrativos pueden realizar ante la DGT, según el Convenio de Encomienda y la operativa técnica vigente.
+
+Incluye:
+
+Documento técnico
+
+Flujo operativo
+
+Validaciones automáticas
+
+Reglas de negocio
+
+BPMN
+
+Errores típicos
+
+2. ARQUITECTURA DEL SISTEMA DGT–COLEGIO–GESTORÍA
+
+Gestoría
+
+Captura documentación
+
+Valida
+
+Genera expediente XML
+
+Firma electrónicamente
+
+Colegio de Gestores
+
+Valida estructura
+
+Control antifraude
+
+Sellado de tiempo
+
+Envío a DGT
+
+DGT
+
+Procesamiento automático
+
+Validaciones técnicas y fiscales
+
+Resolución
+
+3. REGLAS DE NEGOCIO GENERALES
+
+Todo expediente debe estar firmado electrónicamente.
+
+La documentación debe ser legible y coherente.
+
+Las tasas deben estar correctamente asociadas.
+
+El vehículo debe tener ITV válida cuando proceda.
+
+No puede existir prohibición de disponer salvo excepciones.
+
+4. VALIDACIONES AUTOMÁTICAS SITEX/REGWEB
+
+Identidad del solicitante
+
+Titularidad
+
+ITV (NIVE)
+
+Impuestos (IVTM, ITP, IEDMT)
+
+Cargas y precintos
+
+Estado del vehículo
+
+Homologación
+
+5. TRÁMITES COMPLETOS
+
+🅰 A. MATRICULACIONES
+
+A1. Matriculación ordinaria
+
+Inputs
+
+NIVE
+
+Factura
+
+IVTM
+
+IEDMT
+
+Tasa 1.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Colegio → Gestoría
+
+A2. Matriculación por importación
+
+Inputs
+
+Documentación extranjera
+
+COC o ficha reducida
+
+ITV
+
+DUA (si aplica)
+
+IVTM
+
+IEDMT
+
+BPMN
+
+Gestoría: Verifica COC/DUA
+Colegio: Valida
+DGT: Homologación + fiscalidad
+Asignación de matrícula
+
+A3. Matriculación temporal (placas verdes)
+
+Inputs
+
+Documentación disponible
+
+Tasa 1.4
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+A4. Rematriculación
+
+Inputs
+
+Permiso
+
+Ficha técnica
+
+Tasa 1.2
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅱 B. CAMBIOS DE TITULARIDAD
+
+(Incluye los tres trámites completos)
+
+B1. Transferencia de vehículo
+
+Inputs
+
+Contrato
+
+Permiso
+
+Ficha técnica
+
+IVTM
+
+ITP
+
+Tasa 1.5
+
+BPMN
+
+Gestoría: Genera XML
+Colegio: Valida
+DGT: Cargas + ITV + impuestos
+Permiso nuevo
+
+B2. Notificación de venta
+
+Inputs
+
+Contrato
+
+Tasa 4.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+B3. Aceptación de venta
+
+Inputs
+
+Contrato
+
+IVTM
+
+ITP
+
+Tasa 1.5
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅲 C. DOCUMENTACIÓN DEL VEHÍCULO
+
+C1. Duplicado del permiso de circulación
+
+Inputs
+
+DNI
+
+Declaración de extravío
+
+Tasa 4.4
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+C2. Duplicado de ficha técnica electrónica
+
+Inputs
+
+Permiso
+
+ITV
+
+BPMN
+
+Gestoría → ITV → DGT → Gestoría
+
+C3. Cambio de domicilio fiscal
+
+Inputs
+
+DNI
+
+Justificante de domicilio
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+C4. Autorización provisional de circulación
+
+Inputs
+
+Documentación del trámite principal
+
+Tasa 4.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅳 D. BAJAS
+
+D1. Baja temporal
+
+Inputs
+
+Permiso
+
+Tasa 4.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+D2. Baja definitiva
+
+Inputs
+
+Certificado CAT
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+D3. Baja por exportación
+
+Inputs
+
+Documentación de exportación
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+D4. Baja por tránsito comunitario
+
+Inputs
+
+Justificante de traslado
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅴 E. INFORMES
+
+E1. Informe reducido
+
+Inputs
+
+Matrícula
+
+Tasa 4.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+E2. Informe completo
+
+Inputs
+
+Matrícula
+
+Tasa 4.1
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+E3. Consulta de cargas y precintos
+
+Inputs
+
+Matrícula
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅵 F. DISTINTIVOS
+
+F1. Distintivo ambiental
+
+Inputs
+
+Matrícula
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+F2. Certificado de características
+
+Inputs
+
+Permiso
+
+Ficha técnica
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+🅶 G. INTERNACIONALES
+
+G1. Permiso internacional de conducción
+
+Inputs
+
+DNI
+
+Permiso español
+
+Foto
+
+Tasa 4.5
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
+G2. Matriculación por cambio de residencia
+
+Inputs
+
+Documentación extranjera
+
+Empadronamiento
+
+ITV
+
+Exención IEDMT
+
+BPMN
+
+Gestoría → Colegio → DGT → Gestoría
+
