@@ -26,7 +26,10 @@ src/
   lib/          clientes compartidos
   constants.js  labels y navegación
 supabase/
+  schema_base.sql
   ops_incremental.sql
+  storage_setup.sql
+  seed_demo.sql
 ```
 
 ## Variables de entorno
@@ -49,10 +52,16 @@ npm run build
 ```
 
 ## Base de datos
-Ejecutar en Supabase:
-- `supabase/ops_incremental.sql`
+Bootstrap recomendado en este orden:
+1. `supabase/schema_base.sql`
+2. `supabase/ops_incremental.sql`
+3. `supabase/storage_setup.sql`
+4. `supabase/seed_demo.sql`
 
-Ese SQL ahora incluye también la RPC `reconcile_case_checklist(uuid, jsonb)` para persistir en DB el checklist derivado por plantilla.
+Ese flujo deja creado el schema base, el bucket `case-documents`, las RPCs y un caso demo inicial.
+
+Guía detallada:
+- `docs/supabase-bootstrap.md`
 
 ## Estado honesto
 La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP:
