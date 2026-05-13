@@ -1,17 +1,67 @@
-# Alfa-Pyme CSV + History + Copilot + Retry MVP
+# Alfa-Pyme Ops Cockpit MVP
 
-Reemplaza en GitHub:
-- `src/`
-- `package.json`
-- `index.html`
-- `README.md`
+MVP operacional para gestorías orientado a expedientes documentales, validación humana y preparación de salidas hacia distintos canales.
 
-Ejecuta en Supabase:
+## Stack
+- React 19
+- Vite 8
+- Supabase (DB + Storage + RPC)
+- Despliegue previsto en Vercel
+
+## Objetivo del MVP
+Validar un cockpit operativo donde un expediente pase por:
+1. recepción documental
+2. checklist y validación
+3. visor documental
+4. preparación de salida
+5. historial operativo
+6. sesiones tipo copilot
+
+## Estructura actual
+```text
+src/
+  components/   UI reutilizable básica
+  views/        pantallas principales del cockpit
+  services/     acceso a Supabase y operaciones del negocio
+  lib/          clientes compartidos
+  constants.js  labels y navegación
+supabase/
+  ops_incremental.sql
+```
+
+## Variables de entorno
+Crear `.env` a partir de `.env.example`:
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+## Desarrollo local
+```bash
+npm install
+npm run dev
+```
+
+## Build de validación
+```bash
+npm run build
+```
+
+## Base de datos
+Ejecutar en Supabase:
 - `supabase/ops_incremental.sql`
 
-Incluye:
-- CSV descargable real desde batches.
-- Historial visible por expediente.
-- Copilot cockpit operacional.
-- Retry logic visual.
-- Botón explícito de subida.
+## Estado honesto
+La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP:
+- hay simulación en clasificación/OCR/confianza
+- faltan integraciones reales del execution engine
+- las policies SQL incluidas siguen siendo demasiado abiertas para producción
+- el cockpit y los lotes están pensados para validación operativa, no todavía para operación final endurecida
+
+## Prioridades recomendadas
+1. convertir los mocks documentales en lógica real
+2. cerrar execution engine de batches, sesiones y retries
+3. endurecer seguridad y policies de Supabase
+4. conectar despliegue y observabilidad de entorno
+5. incorporar documentación funcional continua desde el PDF maestro
