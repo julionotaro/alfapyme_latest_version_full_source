@@ -20,6 +20,36 @@ const expectations = {
     requiredTypes: ['dni', 'declaracion_extravio', 'justificante_pago'],
     targetState: 'ready_for_output',
   },
+  baja_temporal_ok: {
+    caseData: { case_type: 'baja_temporal' },
+    requiredTypes: ['permiso_circulacion', 'dni', 'justificante_pago'],
+    targetState: 'ready_for_output',
+  },
+  baja_definitiva_ok: {
+    caseData: { case_type: 'baja_definitiva' },
+    requiredTypes: ['certificado_cat', 'permiso_circulacion'],
+    targetState: 'ready_for_output',
+  },
+  notificacion_venta_ok: {
+    caseData: { case_type: 'notificacion_venta' },
+    requiredTypes: ['contrato_factura', 'dni_vendedor', 'justificante_pago'],
+    targetState: 'ready_for_output',
+  },
+  aceptacion_venta_ok: {
+    caseData: { case_type: 'aceptacion_venta' },
+    requiredTypes: ['contrato_factura', 'dni_comprador', 'justificante_pago'],
+    targetState: 'ready_for_output',
+  },
+  matriculacion_importacion_ok: {
+    caseData: { case_type: 'matriculacion_importacion' },
+    requiredTypes: ['documentacion_extranjera', 'coc_ficha_reducida', 'dua', 'empadronamiento', 'justificante_pago'],
+    targetState: 'ready_for_output',
+  },
+  matriculacion_incompleta: {
+    caseData: { case_type: 'matriculacion' },
+    requiredTypes: ['documentacion_extranjera', 'coc_ficha_reducida', 'justificante_pago'],
+    targetState: 'human_validation',
+  },
 }
 
 async function readCaseDocuments(caseSlug) {
@@ -61,6 +91,7 @@ async function main() {
     results.push({
       caseSlug,
       ok,
+      detectedTypes,
       targetState: assessment.decision.targetState,
       expectedTargetState: expected.targetState,
       missingExpectedTypes,

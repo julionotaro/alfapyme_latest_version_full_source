@@ -22,8 +22,7 @@ Se incorporó una capa inicial reusable en `src/domain/tyrion/`:
    - decisión automática preliminar
 
 ## Qué NO resuelve todavía
-- OCR real de producción
-- extracción por campos desde documento visual real
+- OCR real de producción endurecido con métricas/calidad por lote
 - validaciones cruzadas profundas con reglas DGT/fiscales completas
 - validaciones fiscales/DGT reales
 - edición/configuración administrativa de plantillas por cliente
@@ -90,6 +89,16 @@ Ruta B recomendada a continuación:
 - ampliar producto, no solo ordenar entorno
 - cubrir más trámites DGT en `requirement-templates.js`
 - endurecer reglas operativas y trazabilidad para más verticales/casos
+
+## Entrada documental real ya integrada en esta iteración
+- `src/lib/document-ingestion.js` añade una capa real de lectura documental antes del análisis de Tyrion
+- soporta:
+  - ficheros textuales (`txt`, `md`, `csv`, `json`)
+  - PDF con texto embebido (`pdf_text`)
+  - PDF escaneado mediante OCR en navegador sobre hasta 3 páginas (`pdf_ocr`)
+  - imágenes mediante OCR (`image_ocr`)
+- `src/services/documents.js` ya registra el origen de ingesta en `ai_payload.ingestion_source`
+- si la extracción falla o no devuelve texto útil, el sistema conserva fallback seguro con `buildSimulatedOcrText(...)`
 
 ## Dataset sintético y fases de avance ya habilitadas
 - `scripts/generate_synthetic_dgt_dataset.mjs` genera un dataset reproducible con documentos ficticios para:

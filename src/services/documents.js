@@ -1,24 +1,9 @@
 import { supabase } from '../lib/supabase'
 import { analyzeDocument, buildSimulatedOcrText } from '../domain/tyrion/index.js'
+import { extractDocumentText } from '../lib/document-ingestion'
 import { logEvent } from './history'
 
 const BUCKET = 'case-documents'
-const TEXT_LIKE_EXTENSIONS = ['txt', 'md', 'csv', 'json']
-
-async function extractRawDocumentText(file) {
-  const extension = String(file?.name || '').split('.').pop()?.toLowerCase() || ''
-
-  if (TEXT_LIKE_EXTENSIONS.includes(extension)) {
-    try {
-      const text = await file.text()
-      if (text?.trim()) return text
-    } catch {
-      // fallback below
-    }
-  }
-
-  return buildSimulatedOcrText(file)
-}
 
 export async function fetchDocuments(caseId) {
   const { data, error } = await supabase
@@ -46,7 +31,8 @@ export async function uploadDocument({ caseId, organizationId, file }) {
   const upload = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
   if (upload.error) throw upload.error
 
-  const rawDocumentText = await extractRawDocumentText(file)
+  const extraction = await extractDocumentText(file)
+  const rawDocumentText = extraction.text?.trim() ? extraction.text : buildSimulatedOcrText(file)
   const analysis = analyzeDocument({ fileName: file.name, ocrText: rawDocumentText })
   const documentType = analysis.documentType
   const confidence = analysis.confidence
@@ -65,11 +51,12 @@ export async function uploadDocument({ caseId, organizationId, file }) {
       confidence,
       ocr_text: rawDocumentText,
       ai_payload: {
-        engine: 'tyrion_document_intelligence_v1',
+        engine: 'tyrion_document_intelligence_v2',
         document_type: documentType,
         confidence,
         extracted_fields: analysis.extractedFields,
         normalized_text: analysis.normalizedText,
+        ingestion_source: extraction.source,
       },
     })
     .select()

@@ -57,6 +57,26 @@ const TYPE_RULES = [
     strongSignals: ['vehiculo', 'baja definitiva'],
   },
   {
+    type: DOCUMENT_TYPES.COC_FICHA_REDUCIDA,
+    keywords: ['coc', 'ficha reducida', 'certificado de conformidad'],
+    strongSignals: ['homologacion', 'bastidor', 'marca', 'modelo'],
+  },
+  {
+    type: DOCUMENT_TYPES.DUA,
+    keywords: ['dua', 'documento unico administrativo', 'documento único administrativo', 'aduana'],
+    strongSignals: ['importacion', 'importación', 'mrn'],
+  },
+  {
+    type: DOCUMENT_TYPES.DOCUMENTACION_EXTRANJERA,
+    keywords: ['fahrzeugbrief', 'registration certificate', 'foreign registration', 'documentacion extranjera'],
+    strongSignals: ['country', 'matricula', 'bastidor'],
+  },
+  {
+    type: DOCUMENT_TYPES.EMPADRONAMIENTO,
+    keywords: ['empadronamiento', 'padron municipal', 'padrón municipal'],
+    strongSignals: ['domicilio', 'municipio'],
+  },
+  {
     type: DOCUMENT_TYPES.SOLICITUD_DUPLICADO,
     keywords: ['duplicado'],
     strongSignals: ['solicitud'],

@@ -88,6 +88,33 @@ const GESTORIA_DGT_TEMPLATE = {
       automaticValidations: ['autenticidad_cat', 'titularidad_vehiculo'],
       mandatoryHumanEscalations: ['certificado_especial', 'documentacion_ilegible'],
     },
+    matriculacion: {
+      code: 'E1',
+      family: 'matriculaciones',
+      label: 'Matriculación ordinaria',
+      requiredDocuments: [
+        DOCUMENT_TYPES.DOCUMENTACION_EXTRANJERA,
+        DOCUMENT_TYPES.COC_FICHA_REDUCIDA,
+        DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+      ],
+      recommendedDocuments: [DOCUMENT_TYPES.DUA, DOCUMENT_TYPES.EMPADRONAMIENTO, DOCUMENT_TYPES.DNI],
+      automaticValidations: ['identidad', 'origen_vehiculo', 'homologacion', 'fiscalidad'],
+      mandatoryHumanEscalations: ['origen_vehiculo', 'homologacion_especial', 'documentacion_ilegible'],
+    },
+    matriculacion_importacion: {
+      code: 'E2',
+      family: 'matriculaciones',
+      label: 'Matriculación por importación',
+      requiredDocuments: [
+        DOCUMENT_TYPES.DOCUMENTACION_EXTRANJERA,
+        DOCUMENT_TYPES.COC_FICHA_REDUCIDA,
+        DOCUMENT_TYPES.DUA,
+        DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+      ],
+      recommendedDocuments: [DOCUMENT_TYPES.EMPADRONAMIENTO, DOCUMENT_TYPES.DNI],
+      automaticValidations: ['identidad', 'origen_vehiculo', 'homologacion', 'aduanas', 'fiscalidad'],
+      mandatoryHumanEscalations: ['origen_vehiculo', 'homologacion_especial', 'documentacion_ilegible'],
+    },
   },
 }
 

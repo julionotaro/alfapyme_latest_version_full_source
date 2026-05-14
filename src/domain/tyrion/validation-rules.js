@@ -35,6 +35,7 @@ function evaluateCrossDocumentValidations({ caseData, documents = [] }) {
     return []
   })
   const ownerNames = getFlatValues(documents, (fields) => (fields.ownerName ? [fields.ownerName] : []))
+  const addressValues = getFlatValues(documents, (fields) => (fields.address ? [fields.address] : []))
 
   validations.push({
     code: 'plate_consistency',
@@ -101,6 +102,57 @@ function evaluateCrossDocumentValidations({ caseData, documents = [] }) {
     })
   }
 
+  if (caseData?.case_type === 'notificacion_venta' || caseData?.case_type === 'aceptacion_venta') {
+    validations.push({
+      code: 'contract_parties_present',
+      label: 'Contrato con partes identificadas',
+      status: sellerNames.length > 0 && buyerNames.length > 0 ? 'passed' : 'failed',
+      detail:
+        sellerNames.length > 0 && buyerNames.length > 0
+          ? `Vendedor: ${sellerNames[0]} · Comprador: ${buyerNames[0]}`
+          : 'Faltan datos de comprador o vendedor en la documentación contractual.',
+    })
+  }
+
+  if (caseData?.case_type === 'baja_temporal' || caseData?.case_type === 'baja_definitiva') {
+    validations.push({
+      code: 'owner_identity_present',
+      label: 'Titular o identidad principal presente',
+      status: ownerNames.length > 0 || sellerNames.length > 0 ? 'passed' : 'failed',
+      detail:
+        ownerNames.length > 0 || sellerNames.length > 0
+          ? `Identidad detectada: ${ownerNames[0] || sellerNames[0]}`
+          : 'No se detectó identidad principal suficiente para la baja.',
+    })
+  }
+
+  if (caseData?.case_type === 'matriculacion' || caseData?.case_type === 'matriculacion_importacion') {
+    validations.push({
+      code: 'vin_presence',
+      label: 'Bastidor presente en documentación técnica',
+      status: vins.length > 0 ? 'passed' : 'failed',
+      detail: vins.length > 0 ? `Bastidor detectado: ${vins[0]}` : 'No se detectó bastidor suficiente.',
+    })
+
+    validations.push({
+      code: 'address_presence',
+      label: 'Domicilio detectado en soporte del solicitante',
+      status: addressValues.length > 0 ? 'passed' : 'failed',
+      detail:
+        addressValues.length > 0 ? `Domicilio detectado: ${addressValues[0]}` : 'No se detectó domicilio suficiente.',
+    })
+  }
+
+  if (caseData?.case_type === 'cambio_domicilio') {
+    validations.push({
+      code: 'address_presence',
+      label: 'Domicilio detectado en justificante',
+      status: addressValues.length > 0 ? 'passed' : 'failed',
+      detail:
+        addressValues.length > 0 ? `Domicilio detectado: ${addressValues[0]}` : 'No se detectó domicilio suficiente.',
+    })
+  }
+
   return validations
 }
 
@@ -118,6 +170,9 @@ export function evaluateExpedient({ caseData, documents = [] }) {
   if (lowConfidenceDocuments.length > 0) escalations.push('low_confidence_documents')
   if (failedCrossValidations.length > 0) escalations.push('cross_document_inconsistency')
   if (requirement.family === 'bajas' && documents.length === 0) escalations.push('missing_core_vehicle_support')
+  if (requirement.family === 'matriculaciones' && documents.length > 0 && failedCrossValidations.some((v) => ['vin_presence', 'address_presence'].includes(v.code))) {
+    escalations.push('origen_vehiculo')
+  }
 
   const actionableMissingDocuments = missingRequiredDocuments.map((type) => ({
     type,
