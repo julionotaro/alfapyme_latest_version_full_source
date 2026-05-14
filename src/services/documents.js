@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { detectMockDocumentType } from '../domain/tyrion/mock-classifier'
+import { analyzeDocument, buildSimulatedOcrText } from '../domain/tyrion'
 import { logEvent } from './history'
 
 const BUCKET = 'case-documents'
@@ -30,8 +30,10 @@ export async function uploadDocument({ caseId, organizationId, file }) {
   const upload = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
   if (upload.error) throw upload.error
 
-  const documentType = detectMockDocumentType(file.name)
-  const confidence = documentType === 'documento_trafico' ? 0.72 : 0.88
+  const simulatedOcrText = buildSimulatedOcrText(file)
+  const analysis = analyzeDocument({ fileName: file.name, ocrText: simulatedOcrText })
+  const documentType = analysis.documentType
+  const confidence = analysis.confidence
 
   const { data, error } = await supabase
     .from('documents')
@@ -45,11 +47,13 @@ export async function uploadDocument({ caseId, organizationId, file }) {
       status: 'ai_extracted',
       document_type: documentType,
       confidence,
-      ocr_text: `OCR simulado para ${file.name}`,
+      ocr_text: simulatedOcrText,
       ai_payload: {
-        engine: 'tyrion_simulado',
+        engine: 'tyrion_document_intelligence_v1',
         document_type: documentType,
         confidence,
+        extracted_fields: analysis.extractedFields,
+        normalized_text: analysis.normalizedText,
       },
     })
     .select()
@@ -70,6 +74,7 @@ export async function uploadDocument({ caseId, organizationId, file }) {
       file_name: file.name,
       document_type: documentType,
       confidence,
+      extracted_fields: analysis.extractedFields,
     },
   })
 

@@ -12,6 +12,7 @@ export const HUMAN_REVIEW_REASON_LABELS = {
   missing_required_documents: 'Faltan documentos obligatorios para el trámite',
   low_confidence_documents: 'Hay documentos con baja confianza de clasificación/extracción',
   missing_core_vehicle_support: 'Falta soporte documental base del vehículo',
+  cross_document_inconsistency: 'Se detectaron incoherencias entre documentos del expediente',
 }
 
 export const HUMAN_REVIEW_OWNER_BY_REASON = {
@@ -28,6 +29,7 @@ export const HUMAN_REVIEW_OWNER_BY_REASON = {
   missing_required_documents: 'Cliente / operador documental',
   low_confidence_documents: 'Operador documental',
   missing_core_vehicle_support: 'Cliente / operador documental',
+  cross_document_inconsistency: 'Gestor senior de validación documental',
 }
 
 export function getHumanReviewLabel(reason) {

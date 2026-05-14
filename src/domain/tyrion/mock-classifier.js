@@ -1,6 +1,11 @@
+import { analyzeDocument } from './document-intelligence'
 import { DOCUMENT_TYPES } from './document-types'
 
 export function detectMockDocumentType(name = '') {
+  const analyzed = analyzeDocument({ fileName: name, ocrText: '' })
+  if (analyzed.documentType && analyzed.documentType !== DOCUMENT_TYPES.DOCUMENTO_TRAFICO) {
+    return analyzed.documentType
+  }
   const normalized = name.toLowerCase()
 
   if (normalized.includes('dni') && normalized.includes('compr')) return DOCUMENT_TYPES.DNI_COMPRADOR

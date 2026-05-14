@@ -14,6 +14,7 @@ export {
   getHumanReviewOwner,
 } from './human-review-rules'
 export { detectMockDocumentType } from './mock-classifier'
+export { analyzeDocument, buildSimulatedOcrText } from './document-intelligence'
 export { evaluateExpedient } from './validation-rules'
 export { projectChecklistFromRequirement } from './checklist-projection'
 export {

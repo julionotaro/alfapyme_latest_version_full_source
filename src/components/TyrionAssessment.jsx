@@ -21,6 +21,7 @@ export function TyrionAssessment({ assessment }) {
     actionableMissingDocuments,
     lowConfidenceDocuments,
     automaticValidations,
+    automaticValidationResults,
     actionableEscalations,
   } = assessment
 
@@ -56,6 +57,15 @@ export function TyrionAssessment({ assessment }) {
               <li key={item}>{item}</li>
             ))}
           </ul>
+          {automaticValidationResults?.length > 0 && (
+            <ul>
+              {automaticValidationResults.map((item) => (
+                <li key={item.code}>
+                  <b>{item.label}:</b> {item.status === 'passed' ? 'ok' : 'revisar'} · {item.detail}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div>
@@ -96,6 +106,7 @@ export function TyrionAssessment({ assessment }) {
             {lowConfidenceDocuments.map((document) => (
               <li key={document.id}>
                 {document.file_name} · {document.document_type} · conf. {document.confidence}
+                {document.ai_payload?.extracted_fields?.plates?.length ? ` · mat.: ${document.ai_payload.extracted_fields.plates.join(', ')}` : ''}
               </li>
             ))}
           </ul>

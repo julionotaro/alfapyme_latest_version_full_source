@@ -22,12 +22,35 @@ Se incorporó una capa inicial reusable en `src/domain/tyrion/`:
    - decisión automática preliminar
 
 ## Qué NO resuelve todavía
-- OCR real
-- extracción por campos
-- validaciones cruzadas profundas
-- coherencia entre documentos
+- OCR real de producción
+- extracción por campos desde documento visual real
+- validaciones cruzadas profundas con reglas DGT/fiscales completas
 - validaciones fiscales/DGT reales
 - edición/configuración administrativa de plantillas por cliente
+
+## Mejora incorporada en la capa de inteligencia documental
+- `document-intelligence.js` añade una primera capa de análisis menos dependiente del nombre exacto del PDF
+- ahora Tyrion puntúa por señales textuales/documentales y extrae campos base cuando aparecen en nombre/OCR simulado:
+  - matrícula
+  - bastidor
+  - DNI/NIE
+  - comprador
+  - vendedor
+  - titular
+  - importe
+  - fecha
+  - domicilio
+- `uploadDocument(...)` ya guarda en `ai_payload`:
+  - `document_type`
+  - `confidence`
+  - `extracted_fields`
+  - `normalized_text`
+- `evaluateExpedient(...)` ahora añade validaciones cruzadas básicas entre documentos para detectar:
+  - matrículas inconsistentes
+  - bastidores inconsistentes
+  - discrepancias comprador/contrato
+  - discrepancias vendedor/contrato
+  - discrepancia titular permiso ↔ vendedor en transferencia
 
 ## Estado actual de la unificación UI + Tyrion + DB
 - el frontend ya no depende solo de una proyección efímera del checklist

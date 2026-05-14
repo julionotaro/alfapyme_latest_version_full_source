@@ -92,7 +92,7 @@ export function WorkspaceView({
         <h4>Documentos</h4>
         {documents.map((document) => (
           <p key={document.id}>
-            • {document.file_name} <b>{document.document_type}</b>{' '}
+            • {document.file_name} <b>{document.document_type}</b> <small>conf. {document.confidence}</small>{' '}
             <button
               onClick={() => {
                 setActiveDoc(document)
