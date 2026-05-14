@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-05-14T07:22:10.029Z",
+  "cases": [
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "permiso_circulacion.txt",
+      "path": "synthetic-data/transferencia_ok/permiso_circulacion.txt"
+    },
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "ficha_tecnica.txt",
+      "path": "synthetic-data/transferencia_ok/ficha_tecnica.txt"
+    },
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "contrato_compraventa.txt",
+      "path": "synthetic-data/transferencia_ok/contrato_compraventa.txt"
+    },
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "dni_vendedor.txt",
+      "path": "synthetic-data/transferencia_ok/dni_vendedor.txt"
+    },
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "dni_comprador.txt",
+      "path": "synthetic-data/transferencia_ok/dni_comprador.txt"
+    },
+    {
+      "case": "transferencia_ok",
+      "caseType": "transferencia",
+      "fileName": "justificante_pago.txt",
+      "path": "synthetic-data/transferencia_ok/justificante_pago.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "permiso_circulacion.txt",
+      "path": "synthetic-data/transferencia_inconsistente/permiso_circulacion.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "ficha_tecnica.txt",
+      "path": "synthetic-data/transferencia_inconsistente/ficha_tecnica.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "contrato_compraventa.txt",
+      "path": "synthetic-data/transferencia_inconsistente/contrato_compraventa.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "dni_vendedor.txt",
+      "path": "synthetic-data/transferencia_inconsistente/dni_vendedor.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "dni_comprador.txt",
+      "path": "synthetic-data/transferencia_inconsistente/dni_comprador.txt"
+    },
+    {
+      "case": "transferencia_inconsistente",
+      "caseType": "transferencia",
+      "fileName": "justificante_pago.txt",
+      "path": "synthetic-data/transferencia_inconsistente/justificante_pago.txt"
+    },
+    {
+      "case": "duplicado_ok",
+      "caseType": "duplicado",
+      "fileName": "dni.txt",
+      "path": "synthetic-data/duplicado_ok/dni.txt"
+    },
+    {
+      "case": "duplicado_ok",
+      "caseType": "duplicado",
+      "fileName": "declaracion_extravio.txt",
+      "path": "synthetic-data/duplicado_ok/declaracion_extravio.txt"
+    },
+    {
+      "case": "duplicado_ok",
+      "caseType": "duplicado",
+      "fileName": "justificante_pago.txt",
+      "path": "synthetic-data/duplicado_ok/justificante_pago.txt"
+    }
+  ]
+}

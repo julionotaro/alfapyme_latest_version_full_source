@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPES } from './document-types'
+import { DOCUMENT_TYPES } from './document-types.js'
 
 const TYPE_RULES = [
   {
@@ -101,14 +101,14 @@ function extractFields(rawText) {
     match[1].toUpperCase(),
   )
   const names = unique([
-    firstMatch(/(?:comprador|buyer)[:\s]+([a-z\s]{4,})/i, text)?.trim(),
-    firstMatch(/(?:vendedor|seller)[:\s]+([a-z\s]{4,})/i, text)?.trim(),
-    firstMatch(/(?:titular)[:\s]+([a-z\s]{4,})/i, text)?.trim(),
-    firstMatch(/(?:nombre)[:\s]+([a-z\s]{4,})/i, text)?.trim(),
+    firstMatch(/(?:comprador|buyer):\s*([^\n]{4,})/i, text)?.trim(),
+    firstMatch(/(?:vendedor|seller):\s*([^\n]{4,})/i, text)?.trim(),
+    firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim(),
+    firstMatch(/(?:nombre):\s*([^\n]{4,})/i, text)?.trim(),
   ])
-  const buyerName = firstMatch(/(?:comprador|buyer)[:\s]+([a-z\s]{4,})/i, text)?.trim() || null
-  const sellerName = firstMatch(/(?:vendedor|seller)[:\s]+([a-z\s]{4,})/i, text)?.trim() || null
-  const ownerName = firstMatch(/(?:titular)[:\s]+([a-z\s]{4,})/i, text)?.trim() || null
+  const buyerName = firstMatch(/(?:comprador|buyer):\s*([^\n]{4,})/i, text)?.trim() || null
+  const sellerName = firstMatch(/(?:vendedor|seller):\s*([^\n]{4,})/i, text)?.trim() || null
+  const ownerName = firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim() || null
   const amount = firstMatch(/(?:importe|precio|total)[:\s€]*([0-9]+(?:[.,][0-9]{2})?)/i, text)
   const date = firstMatch(/\b([0-3]?\d[\/.-][0-1]?\d[\/.-](?:20)?\d{2})\b/, text)
   const address = firstMatch(/(?:domicilio|direccion|dirección)[:\s]+([^\n,]{5,})/i, text)?.trim() || null

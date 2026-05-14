@@ -89,5 +89,23 @@ Ruta A cerrada:
 Ruta B recomendada a continuación:
 - ampliar producto, no solo ordenar entorno
 - cubrir más trámites DGT en `requirement-templates.js`
-- mejorar clasificación mock y preparación hacia OCR/extracción real
 - endurecer reglas operativas y trazabilidad para más verticales/casos
+
+## Dataset sintético y fases de avance ya habilitadas
+- `scripts/generate_synthetic_dgt_dataset.mjs` genera un dataset reproducible con documentos ficticios para:
+  - `transferencia_ok`
+  - `transferencia_inconsistente`
+  - `duplicado_ok`
+- `scripts/validate_synthetic_dataset.mjs` ejecuta una validación automatizada de:
+  - clasificación documental
+  - extracción básica de campos
+  - decisión esperada del expediente
+  - inconsistencias cruzadas
+- Fase 1 ya queda cubierta sobre dataset sintético para:
+  - permiso de circulación
+  - ficha técnica
+  - contrato/factura
+- Fase 2 ya queda cubierta sobre dataset sintético para:
+  - DNI
+  - justificante de pago
+- Fase 3 queda preparada a nivel de arquitectura porque `evaluateExpedient(...)` ya admite sumar reglas más finas por trámite y validar su impacto con `npm run dataset:validate`

@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPE_LABELS } from './document-types'
+import { DOCUMENT_TYPE_LABELS } from './document-types.js'
 
 function normalize(value) {
   return String(value || '')

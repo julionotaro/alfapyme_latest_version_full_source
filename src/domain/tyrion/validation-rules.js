@@ -1,6 +1,6 @@
-import { getHumanReviewLabel, getHumanReviewOwner } from './human-review-rules'
-import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from './document-types'
-import { getTramiteRequirement, TYRION_CASE_STATES } from './tramite-requirements'
+import { getHumanReviewLabel, getHumanReviewOwner } from './human-review-rules.js'
+import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from './document-types.js'
+import { getTramiteRequirement, TYRION_CASE_STATES } from './tramite-requirements.js'
 
 function buildDocumentTypeSet(documents = []) {
   return new Set(documents.map((document) => document.document_type).filter(Boolean))

@@ -51,6 +51,25 @@ npm run dev
 npm run build
 ```
 
+## Dataset sintético para Tyrion
+Se añadió un dataset de prueba reproducible para acelerar OCR/extracción/validación documental sin usar datos reales.
+
+Generar fixtures:
+```bash
+npm run dataset:generate
+```
+
+Validar clasificación + extracción + decisión esperada:
+```bash
+npm run dataset:validate
+```
+
+Salida generada:
+- `synthetic-data/manifest.json`
+- `synthetic-data/transferencia_ok/*`
+- `synthetic-data/transferencia_inconsistente/*`
+- `synthetic-data/duplicado_ok/*`
+
 ## Base de datos
 Bootstrap recomendado en este orden:
 1. `supabase/schema_base.sql`

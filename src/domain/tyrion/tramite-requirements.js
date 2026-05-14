@@ -1,4 +1,4 @@
-import { getRequirementForCase } from './requirement-templates'
+import { getRequirementForCase } from './requirement-templates.js'
 
 export const TYRION_CASE_STATES = {
   RECEIVED: 'received',

@@ -1,0 +1,8 @@
+CONTRATO DE COMPRAVENTA
+Vendedor: Mario Gomez Lopez
+Comprador: Lucia Perez Martin
+DNI vendedor: 12345678Z
+DNI comprador: 23456789X
+Matricula: 1234ABC
+Precio: 10500.00
+Fecha: 14/05/2026

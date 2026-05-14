@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPES } from './document-types'
+import { DOCUMENT_TYPES } from './document-types.js'
 
 const BASE_DOCUMENT_INTAKE_TEMPLATE = {
   id: 'base_document_intake',

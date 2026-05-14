@@ -1,5 +1,5 @@
-import { analyzeDocument } from './document-intelligence'
-import { DOCUMENT_TYPES } from './document-types'
+import { analyzeDocument } from './document-intelligence.js'
+import { DOCUMENT_TYPES } from './document-types.js'
 
 export function detectMockDocumentType(name = '') {
   const analyzed = analyzeDocument({ fileName: name, ocrText: '' })
