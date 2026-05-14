@@ -38,8 +38,33 @@ Se incorporó una capa inicial reusable en `src/domain/tyrion/`:
 - luego la UI sigue proyectando sobre esa base persistida para conservar compatibilidad con extras/manuales fuera de plantilla
 - se registra auditoría con `checklist_template_reconciled`
 
+## Validación funcional realizada (transferencia demo)
+Se validó un flujo funcional completo sobre Supabase bootstrapado desde cero con caso demo `EXP-0002`:
+
+1. caso vacío:
+   - Tyrion detectó faltantes
+   - sugirió estado tipo `pending_documents`
+   - bloqueó el paso a salida mientras existían obligatorios pendientes
+2. caso parcialmente completo (1 documento obligatorio):
+   - redujo faltantes
+   - mantuvo bloqueantes restantes
+   - mantuvo una sugerencia coherente con expediente incompleto
+3. caso completo (4 obligatorios de `transferencia`):
+   - desaparecieron bloqueantes
+   - cambió la sugerencia al siguiente estado lógico
+   - permitió pasar a salida
+
+## Conclusión de esta iteración
+- la lógica base de Tyrion ya reacciona al expediente y no solo a la presencia genérica de archivos
+- la unificación UI + checklist + Supabase + evaluación Tyrion quedó funcional para el caso demo de `transferencia`
+- el bootstrap de Supabase quedó documentado y separado en `schema_base.sql`, `ops_incremental.sql`, `storage_setup.sql` y `seed_demo.sql`
+
 ## Siguiente paso recomendado
-Conectar esta capa templatable con:
-- checklist persistente derivado desde plantilla
-- transición automática controlada con auditoría
-- futura configuración por cliente acotada sobre plantillas base, sin abrir complejidad excesiva
+Ruta A cerrada:
+- bootstrap/documentación/prueba funcional mínima validados
+
+Ruta B recomendada a continuación:
+- ampliar producto, no solo ordenar entorno
+- cubrir más trámites DGT en `requirement-templates.js`
+- mejorar clasificación mock y preparación hacia OCR/extracción real
+- endurecer reglas operativas y trazabilidad para más verticales/casos
