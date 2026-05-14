@@ -1,0 +1,1325 @@
+Copilote 
+
+Resumen breve y acción inmediata: Para pruebas reproducibles y escalables, la opción más práctica y técnica es extraer OCR en un servicio backend (self‑hosted o cloud) y validar con fixtures deterministas; si no se puede reescribir ahora, use browser automation en CI (Playwright) ejecutando la capa frontend sobre inputs fijos. 
+
+ 
+
+Comparación rápida de alternativas 
+
+ 
+
+Opción 
+
+ 
+
+Reproducibilidad 
+
+ 
+
+Coste inicial 
+
+ 
+
+Privacidad 
+
+ 
+
+Implementación 
+
+ 
+
+Frontend + Browser automation 
+
+ 
+
+Alta si se fijan inputs y versiones 
+
+ 
+
+Bajo 
+
+ 
+
+Buena 
+
+ 
+
+Medium 
+
+ 
+
+Backend self‑hosted OCR (PaddleOCR/ONNX) 
+
+ 
+
+Muy alta, determinista 
+
+ 
+
+Low–Medium 
+
+ 
+
+Excelente 
+
+ 
+
+Medium 
+
+ 
+
+Cloud OCR APIs (Google/Azure/AWS) 
+
+ 
+
+Alta, pero dependiente de proveedor 
+
+ 
+
+Pay per page 
+
+ 
+
+Baja (document leaves infra) 
+
+ 
+
+Low 
+
+ 
+
+Recomendación de arquitectura mínima sensata 
+
+ 
+
+Mover la ingestión crítica a un backend como microservicio (HTTP API) que reciba PDF/imagen y devuelva: texto, bounding boxes, document type, extracted fields, decision. Esto hace la capa testable con scripts Node/CI y permite reutilizarla desde web, email, WhatsApp y backoffice. Razonamiento: los motores modernos como PaddleOCR ofrecen determinismo y mejores resultados que tesseract.js en producción; además, ONNX/PP‑OCR puede correr en Node y ser versionada para reproducibilidad. [^1] 
+
+ 
+
+Mantener una versión ligera en frontend para UX (previsualización, redacción local) pero no como fuente de verdad para decisiones finales. El backend es la única fuente de verificación. 
+
+ 
+
+Pruebas reproducibles: almacenar fixtures (PDFs, images) + expected outputs (texto, fields, decision). Ejecutar pipeline en CI contra esos fixtures y comparar hashes/text diffs; registrar artefactos (OCR output, images with boxes) para auditoría. 
+
+ 
+
+Alternativas a tesseract.js y patrón híbrido 
+
+ 
+
+Self‑hosted PaddleOCR via ONNX en Node: mejor estructura/layout handling y determinismo frente a tesseract.js; se puede ejecutar en CPU y es reproducible en contenedores. [^1][^2] 
+
+ 
+
+Cloud OCR (Google Vision / AWS Textract / Azure Read) para fases de validación o cuando la precisión supera el coste; útil como fallback o para entrenamiento de reglas de extracción. Precios y capacidades varían por proveedor. [^3] 
+
+ 
+
+Camino más corto y serio para cerrar ahora 
+
+ 
+
+Keep current frontend code but add a small backend wrapper: a Node service that can run the same OCR (or call tesseract.js/Paddle via ONNX) and expose an API. 
+
+ 
+
+Create CI job that runs the frontend ingestion inside a headless browser against stored fixtures (PDFs/images) and also runs the backend OCR on the same fixtures; assert outputs match expected fields and final decision. This gives immediate reproducible evidence without full rewrite. 
+
+ 
+
+If time is very short, run backend OCR only on fixtures and produce a signed report (input hash, OCR text, detected type, fields, decision) as verifiable evidence. 
+
+ 
+
+Riesgos y notas prácticas 
+
+ 
+
+Tesseract.js es gratuito pero menos robusto en layouts y tablas; para producción considere PaddleOCR o cloud APIs según coste/privacidad. [^4][^5] 
+
+ 
+
+Determinismo se logra fijando versiones de modelos, contenedores y test fixtures; registre artefactos para auditoría. [^1] 
+
+ 
+
+References (5) 
+
+ 
+
+[^1]: Deterministic OCR in JavaScript: PaddleOCR for Node, Bun, Deno, and the Browser - DEV Community. https://dev.to/awalariansyah/deterministic-ocr-in-javascript-paddleocr-for-node-bun-deno-and-the-browser-2bgn 
+
+ 
+
+[^2]: Best OCR Libraries for Developers in 2026. https://www.llamaindex.ai/blog/best-ocr-libraries-for-developers 
+
+ 
+
+[^3]: Best OCR APIs for Developers 2026 | APIScout. https://apiscout.dev/guides/best-ocr-api-2026 
+
+ 
+
+[^4]: Open-Source OCR Tools. https://idp-software.com/guides/open-source-ocr/ 
+
+ 
+
+[^5]: Tesseract Alternatives: Modern OCR Solutions for Every Use Case - ML Journey. https://mljourney.com/tesseract-alternatives-modern-ocr-solutions-for-every-use-case/ 
+
+ 
+
+ 
+
+Gemini 
+
+Hablemos de negocios y de arquitectura real. El problema que enfrentan con Alfa-Pyme es un clásico cuello de botella en etapas tempranas de desarrollo: delegar procesamiento pesado a la capa de presentación. 
+
+​Hacer OCR y parseo de PDFs en el navegador es como pedirle al recepcionista de una oficina que no solo reciba los documentos, sino que los traduzca, los analice y tome decisiones legales, todo mientras atiende el teléfono. Eventualmente, el navegador (el recepcionista) colapsa, consume excesiva memoria (especialmente con PDFs escaneados de múltiples páginas típicos en gestorías) y, como ya han notado, vuelve el testing una pesadilla. 
+
+​Aquí tienen mi análisis directo, respondiendo a sus preguntas y proyectando la solución hacia ese futuro omnicanal, asegurando que el piloto con los gestores administrativos fluya sin fricciones técnicas. 
+
+​El camino más corto para cerrar la validación hoy (Sin rehacer todo) 
+
+​Si el mandato de negocio es “validar de forma reproducible ya” sin tocar el código de React, la respuesta no es un script de Node (que no soporta las APIs de Canvas o FileReader de forma nativa sin hacks horribles como jsdom). 
+
+​La solución técnicamente seria es Playwright (o Cypress, pero Playwright es más rápido y robusto para esto). 
+
+​¿Por qué? Playwright levanta una instancia real de Chromium (headless). 
+
+​La ejecución: Escriben un test automatizado que interactúe con su <input type=”file”>, suba el PDF con texto, el PDF escaneado y la imagen. Luego, el test espera a que su frontend termine el procesamiento y captura el estado final (texto extraído, decisión) directamente del DOM o interceptando los logs de consola/estado de React. 
+
+​Resultado: Tienen evidencia fiable, reproducible en cualquier máquina o CI/CD (GitHub Actions), y cero hacks. 
+
+​¿Frontend vs. Backend? (La decisión arquitectónica) 
+
+​A corto plazo (hoy), mantengan la lógica en el frontend y testeen con Playwright para sacar la validación adelante. 
+
+​A medio plazo (la semana que viene), deben mover la ingestión y el OCR al backend. 
+
+Mantener esto en el frontend es un suicidio arquitectónico si el objetivo es habilitar canales como WhatsApp, Email o procesos en lote. Un mensaje de WhatsApp con una foto de un DNI no pasa por un navegador web; necesita un endpoint (webhook) que reciba el archivo y ejecute el mismo pipeline de triaje que la web. 
+
+​La arquitectura multi-canal (El siguiente paso mínimo sensato) 
+
+​Para que Tyrion pueda escalar y recibir documentos desde cualquier frente, necesitan un patrón centralizado y asíncrono. Esta es la arquitectura que evitará que se peguen un tiro en el pie cuando integren el segundo canal: 
+
+​Capa de Recepción (Los “Tentáculos”): La app de React, el webhook de WhatsApp o el parser de correos solo hacen una cosa: recibir el archivo y enviarlo a un Object Storage (como un bucket de S3 o Supabase Storage). 
+
+​Cola de Procesamiento (El “Buffer”): Al subir el archivo, se dispara un evento que entra en una cola de tareas (ej. BullMQ en Node, o un background worker simple). Esto evita que el backend colapse si entran 50 documentos de golpe. 
+
+​Motor de Ingestión y Triaje (El “Cerebro”): El worker del backend descarga el documento, extrae el texto, estructura los campos y toma la decisión. 
+
+​Retorno: El resultado se guarda en base de datos. El frontend (React) simplemente hace polling o recibe un evento por WebSocket indicando “El expediente X ya fue procesado, aquí está el resultado”. 
+
+​La alternativa a tesseract.js (El as bajo la manga) 
+
+​Tesseract.js en el frontend descarga modelos pesados en el cliente, drena la batería en móviles y su precisión con documentos de baja calidad (típicos de oficinas) es mediocre comparado con soluciones modernas. 
+
+​El patrón híbrido más inteligente para ustedes: 
+
+Ya que Tyrion está orquestado con la familia de modelos Gemini 1.5 Flash, tienen la solución en sus manos y no necesitan Tesseract en absoluto. 
+
+​Gemini 1.5 Flash es nativamente multimodal y brutalmente rápido. En lugar de hacer OCR (Tesseract) + Regex o LLM para extraer campos, pueden matar tres pájaros de un tiro enviando el documento (PDF o Imagen) directamente a la API de Gemini desde el backend con un prompt estructurado: 
+
+​“Eres un sistema de triaje. Analiza este documento. Devuelve un JSON estricto con: 1) Tipo documental, 2) Texto íntegro extraído, 3) Campos clave (NIF, importes, fechas), 4) Decisión del expediente.” 
+
+​Ventajas de este enfoque: 
+
+​Coste/Beneficio: Flash es extremadamente económico e infinitamente superior en precisión a Tesseract, especialmente entendiendo la estructura de facturas, contratos y formularios mal escaneados de gestorías. 
+
+​Simplicidad: Reducen un pipeline de 4 pasos (Lector PDF -> OCR -> Extracción -> LLM) a una sola llamada a una API. 
+
+​Robustez: Resuelve el problema de los PDFs con texto embebido, escaneados e imágenes de un solo plumazo. 
+
+​Resumen del plan de acción estratégico 
+
+​Para hoy (Salvar el hito): Instalen Playwright. Creen 3 scripts E2E que suban los 3 archivos de prueba a su React actual y validen los outputs en pantalla. Guarden esos reportes como evidencia de la validación. 
+
+​Para el piloto en Pontevedra: Muevan la lógica de subida a una API sencilla (Node/Python). Que el frontend de Vite solo envíe el archivo. 
+
+​Para el triaje: Desechen Tesseract. Pasen los bytes del documento directamente al modelo Flash de Gemini que ya integraron en Tyrion, solicitando un JSON estructurado como respuesta. 
+
+​Esta es la ruta más pragmática, escalable y profesional. Protege el negocio futuro y elimina código frágil del lado del cliente. ¿Quieren que profundicemos en cómo estructurar ese test rápido de Playwright o en la llamada directa de archivos al modelo? 
+
+ 
+
+ 
+
+Deepseek 
+
+Toda la situación que describes apunta a una tensión clásica: la lógica funciona en el navegador, pero validarla de forma repetible, automatizable y con trazabilidad choca con la dependencia del runtime del navegador. Te propongo un análisis ordenado de las cinco preguntas con recomendaciones concretas y pragmáticas. 
+
+ 
+
+ 
+
+Mejor estrategia para testear el pipeline actual sin rehacerlo 
+
+ 
+
+Respuesta corta: automatización de navegador con Playwright. 
+
+ 
+
+Tu pipeline ya depende de pdfjs-dist (que usa canvas, DOM, workers) y tesseract.js (que corre sobre Web Workers y canvas). Intentar ejecutar eso en Node con polyfills (jsdom, node-canvas, etc.) es una trampa: requiere mantener un entorno frágil, desincronizado del real y no garantiza que el comportamiento sea idéntico al del navegador. 
+
+ 
+
+La vía más rápida y fiable es usar Playwright (o Puppeteer) para: 
+
+ 
+
+1. Levantar el servidor de desarrollo de Vite (o el build). 
+
+2. Navegar a la página de triaje. 
+
+3. Inyectar los ficheros de prueba (los tres casos) mediante page.setInputFiles() sobre el <input type=”file”>. 
+
+4. Disparar la lógica de extracción tal como lo hace el usuario. 
+
+5. Capturar los resultados desde el DOM o, mejor, exponer en window.__result un objeto con: texto extraído, tipo documental, campos y decisión. 
+
+6. Validar con aserciones de Playwright (expect) y generar evidencias (capturas de pantalla, logs, incluso volcar JSON a un fichero). 
+
+ 
+
+Esto es reproducible, se puede ejecutar en CI (GitHub Actions, GitLab CI) con navegadores headless, y no toca nada del código de producción salvo la pequeña exposición de resultados en modo desarrollo si quieres simplificar la captura. Además, te da la misma fidelidad que el usuario final. 
+
+ 
+
+Ejemplo mínimo de test con Playwright: 
+
+ 
+
+```ts 
+
+// test/triaje.spec.ts 
+
+Import { test, expect } from ‘@playwright/test’; 
+
+Import path from ‘path’; 
+
+ 
+
+Const casos = [ 
+
+  { nombre: ‘PDF texto embebido’, archivo: ‘factura-texto.pdf’ }, 
+
+  { nombre: ‘PDF escaneado’, archivo: ‘albaran-escaneado.pdf’ }, 
+
+  { nombre: ‘Imagen OCR’, archivo: ‘dni.jpg’ }, 
+
+]; 
+
+ 
+
+For (const c of casos) { 
+
+  Test(`Extracción de ${c.nombre}`, async ({ page }) => { 
+
+    Await page.goto(‘http://localhost:5173’); 
+
+    Const fileInput = page.locator(‘input[type=”file”]’); 
+
+    Await fileInput.setInputFiles(path.join(__dirname, ‘fixtures’, c.archivo)); 
+
+    // Asumimos que la extracción se dispara automáticamente al cargar 
+
+    // Esperar a que aparezca el resultado (ej. Un elemento con data-testid=”resultado”) 
+
+    Const resultado = page.locator(‘[data-testid=”resultado”]’); 
+
+    Await expect(resultado).toBeVisible(); 
+
+    // Si expones un objeto global en desarrollo: 
+
+    Const extraccion = await page.evaluate(() => (window as any).__resultado); 
+
+    Expect(extraccion.texto).toBeTruthy(); 
+
+    // Validar tipo documental, campos, decisión… 
+
+    Await page.screenshot({ path: `evidencia/${c.nombre}.png`, fullPage: true }); 
+
+  }); 
+
+} 
+
+``` 
+
+ 
+
+Si necesitas más control sobre el proceso (ej. Esperar a que termine un worker), puedes escuchar eventos o exponer una promesa en window. 
+
+ 
+
+ 
+
+¿Mantener extracción/OCR en frontend o mover a backend? 
+
+ 
+
+Recomendación firme: mover la extracción y OCR a backend cuanto antes, aunque sea en un servicio mínimo. 
+
+ 
+
+Por qué: 
+
+ 
+
+· Testabilidad: un endpoint REST (Node + Express, Fastify, etc.) se prueba con herramientas convencionales (Jest + supertest) sin polifills ni navegadores. 
+
+· Reutilización: email, WhatsApp, backoffice no tienen un navegador. Si la lógica solo vive en el frontend, tendrás que duplicarla o construir un adaptador extraño (ej. Un headless browser para cada canal). 
+
+· Rendimiento/experiencia: tesseract.js en el navegador descarga modelos pesados (~10-30 MB), consume CPU y memoria, y es lento en dispositivos móviles. Un backend con Tesseract nativo o servicios cloud es mucho más rápido. 
+
+· Escalabilidad: el backend puede escalar horizontalmente, usar colas (BullMQ, RabbitMQ) para OCR pesado, y gestionar límites de tasa. 
+
+ 
+
+El coste de migrar ahora es bajo si lo encapsulas bien. Incluso en esta fase, puedes mantener una capa de abstracción: el frontend llama a un servicio interno IngestionService que, en desarrollo, podría seguir usando el navegador (con un adaptador temporal) pero en producción apunta a una API. Pero para multi-canal, el backend es imprescindible. 
+
+ 
+
+ 
+
+Arquitectura mínimo sensato para futuro multi-canal 
+
+ 
+
+Siguiente paso: un microservicio de ingesta documental (API REST) con procesamiento asíncrono opcional. 
+
+ 
+
+Diseño simple: 
+
+ 
+
+``` 
+
+┌─────────┐    ┌──────────┐    ┌─────────────────┐ 
+
+│  Web    │    │  Email   │    │  WhatsApp/BO    │ 
+
+└────┬────┘    └────┬─────┘    └────────┬────────┘ 
+
+     │  multipart   │  (webhook)        │  (webhook) 
+
+     ▼              ▼                   ▼ 
+
+  POST /api/v1/ingest   (multipart/form-data) 
+
+     │ 
+
+     ▼ 
+
+ 
+
+│   Servicio Node.js (API)    │ 
+
+│   - Acepta archivo          │ 
+
+│   - Extrae texto: pdf-parse │ 
+
+│     o pdfjs-dist en Node    │ 
+
+│   - Si no hay texto → OCR   │ 
+
+│     (tesseract.js en Node   │ 
+
+│      o binario nativo)      │ 
+
+│   - Clasifica y extrae      │ 
+
+│   - Responde JSON con:      │ 
+
+│      texto, tipo, campos,   │ 
+
+│      decisión               │ 
+
+ 
+
+``` 
+
+ 
+
+Tecnologías sugeridas: 
+
+ 
+
+· Framework: Express + multer para recibir archivos. 
+
+· PDF con texto: pdf-parse (wrapper de pdf.js para Node, sin DOM) o pdfjs-dist en Node con el build legacy que no requiere canvas para extraer texto puro. 
+
+· OCR: tesseract.js con node-canvas (funciona bien en Node) o mejor aún, un contenedor con Tesseract nativo + node-tesseract-ocr (más rápido). 
+
+· Clasificación/extracción: lógica de reglas, expresiones regulares, o un modelo ligero (p.ej. transformers.js si es necesario). 
+
+· Asincronía (si el OCR es lento): endpoint que devuelve inmediatamente un jobId y otro endpoint GET /status/:jobId para consultar. Así no bloqueas al cliente. Puedes usar BullMQ con Redis. 
+
+ 
+
+Esta API puede desplegarse en un VPS, en un contenedor Docker, o en una función serverless (aunque el OCR pesado puede superar límites de tiempo). Para multi-canal, solo tienes que invocar el mismo endpoint desde el webhook del proveedor de email (ej. Mailgun, SendGrid) o de WhatsApp (Twilio). 
+
+ 
+
+ 
+
+Alternativa ligera y robusta a tesseract.js en frontend o patrón híbrido 
+
+ 
+
+Alternativa recomendada: patrón híbrido frontend/backend. 
+
+ 
+
+· Frontend (ligero): solo extrae texto embebido con pdfjs-dist, que es rápido y consume pocos recursos. Si encuentra texto suficiente, clasifica directamente en cliente. 
+
+· Backend (robusto): cuando el frontend detecta que no hay texto (PDF escaneado, imagen), envía el archivo al endpoint de ingesta para que haga OCR. 
+
+ 
+
+Ventajas: 
+
+ 
+
+· El caso más común (PDF con texto) se resuelve instantáneo, incluso offline o sin backend. 
+
+· El OCR pesado se descarga en el servidor, donde puedes usar Tesseract nativo (binario, no JS) o servicios cloud sin penalizar al usuario. 
+
+· No necesitas mantener tesseract.js en el frontend (ahorro de bundle y descarga de modelos). 
+
+ 
+
+Alternativa robusta para OCR en backend: 
+
+ 
+
+· Contenedor Docker con Tesseract 5 + lenguaje spa. La invocación vía node-tesseract-ocr o simplemente child_process.exec(‘tesseract input.png stdout’) es muy rápida y probada. Coste: cero. 
+
+ 
+
+Si por restricciones de despliegue no puedes tener un servicio aparte, puedes usar tesseract.js en un Web Worker del frontend con un modelo más pequeño (solo español, sin LSTM) pero seguirá siendo pesado para imágenes de alta resolución. En ese caso, el híbrido te permite postergar la inversión sin renunciar a un camino serio. 
+
+ 
+
+ 
+
+Camino más corto pero técnicamente serio para cerrar YA 
+
+ 
+
+Si la prioridad es cerrar la validación de los tres casos sin rehacer toda la arquitectura, el plan mínimo viable es: 
+
+ 
+
+1. Añadir un hook en tu app React: en modo desarrollo (import.meta.env.DEV), exponer el resultado final del pipeline en window.__resultado (un objeto con texto, tipo, campos, decisión). Esto es una línea al final del componente y no afecta a producción. 
+
+2. Escribir un test con Playwright que cargue cada fichero de prueba, espere a que window.__resultado tenga un valor y lo valide con aserciones. Así tienes evidencia automatizada, repetible, que puedes ejecutar local y en CI. 
+
+3. Generar evidencias: capturas de pantalla y un pequeño script que vuelque window.__resultado a un JSON para trazabilidad. 
+
+4. Dejar documentado el plan de migración a backend como próximo paso (API de ingesta), pero sin implementarlo aún. Así cumples la validación inmediata y mantienes la dirección técnica correcta. 
+
+ 
+
+Este enfoque: 
+
+ 
+
+· No modifica la lógica de negocio. 
+
+· No introduce polifills ni entornos falsos. 
+
+· Es reproducible 100%. 
+
+· Se puede entregar en horas/días. 
+
+ 
+
+El test en Playwright se puede ejecutar contra el build de producción (vite build && vite preview) o contra el servidor de desarrollo, y queda listo para integrarse en el pipeline de CI cuando toque. 
+
+ 
+
+ 
+
+Resumen de recomendaciones 
+
+ 
+
+Objetivo Recomendación 
+
+Validación rápida y fiable del pipeline actual Playwright contra la app real, con window.__resultado expuesto en dev 
+
+Arquitectura futuro multi-canal API REST en Node.js que centraliza extracción/OCR, reutilizable desde cualquier canal 
+
+OCR robusto y ligero Híbrido: frontend extrae texto con pdf.js, si no hay texto → envía al backend con Tesseract nativo (Docker) 
+
+Cierre inmediato sin rehacer Test Playwright + exposición de resultados en window; planificar API después 
+
+ 
+
+Si quieres, puedo detallar la estructura del endpoint de ingesta o el test de Playwright con un ejemplo completo para tus tres caSos. 
+
+ 
+
+Chatgpt 
+
+Sí: el camino técnicamente serio no es probar esto con Node “imitando” navegador, porque vuestra capa depende de FileReader, canvas, document, workers/browser runtime y PDF rendering. Para validar de forma reproducible, lo correcto es ejecutar la app en navegador real automatizado y guardar evidencia estructurada. 
+
+Mi opinión, basada en experiencia de producto y en cómo escalan estos flujos documentales: para cerrar rápido, mantened la extracción actual en frontend y validádla con Playwright; para producto multicanal, moved la ingestión/OCR a backend en el siguiente corte. 
+
+Mejor estrategia de test reproducible ahora 
+
+Estrategia recomendada inmediata 
+
+Crear un harness de validación dentro de la app Vite/React y probarlo con Playwright. 
+
+No sería una demo falsa, porque Playwright ejecuta Chromium/Firefox/WebKit reales, permite subir archivos con locator.setInputFiles() y tiene assertions con auto-waiting para evitar tests frágiles. Además, su Trace Viewer guarda DOM, screenshots, red, consola y pasos de ejecución para depurar o presentar evidencia. � 
+
+Playwright +2 
+
+La estructura mínima sería: 
+
+Plain text 
+
+Tests/ 
+
+  Fixtures/ 
+
+    01_pdf_text_embedded.pdf 
+
+    02_pdf_scanned.pdf 
+
+    03_image_ocr.png 
+
+ 
+
+  Expected/ 
+
+    01_pdf_text_embedded.expected.json 
+
+    02_pdf_scanned.expected.json 
+
+    03_image_ocr.expected.json 
+
+ 
+
+  Ingestion.spec.ts 
+
+ 
+
+Src/ 
+
+  Routes/ 
+
+    IngestionDebugPage.tsx 
+
+La página /debug/ingestion no tiene que ser bonita. Solo debe permitir: 
+
+Plain text 
+
+1. subir documento 
+
+2. ejecutar el mismo pipeline real de la app 
+
+3. mostrar un JSON final estable 
+
+Ejemplo de salida esperada: 
+
+JSON 
+
+{ 
+
+  “source”: { 
+
+    “filename”: “01_pdf_text_embedded.pdf”, 
+
+    “kind”: “pdf”, 
+
+    “extractionMode”: “pdf-text” 
+
+  }, 
+
+  “text”: { 
+
+    “raw”: “…”, 
+
+    “normalized”: “…”, 
+
+    “confidence”: null 
+
+  }, 
+
+  “documentType”: { 
+
+    “type”: “invoice”, 
+
+    “confidence”: 0.92 
+
+  }, 
+
+  “fields”: { 
+
+    “supplierName”: “Proveedor Demo S.L.”, 
+
+    “invoiceNumber”: “FV-2026-001”, 
+
+    “date”: “2026-05-14”, 
+
+    “totalAmount”: 1240.55, 
+
+    “currency”: “EUR” 
+
+  }, 
+
+  “decision”: { 
+
+    “status”: “accepted”, 
+
+    “reasons”: [“required_fields_present”, “amount_valid”] 
+
+  } 
+
+} 
+
+El test Playwright debería comparar JSON de resultado, no solo pantalla. 
+
+Ejemplo base: 
+
+TypeScript 
+
+Import { test, expect } from ‘@playwright/test’; 
+
+Import path from ‘path’; 
+
+Import fs from ‘fs’; 
+
+ 
+
+Const cases = [ 
+
+  { 
+
+    Name: ‘PDF con texto embebido’, 
+
+    File: ‘01_pdf_text_embedded.pdf’, 
+
+    Expected: ‘01_pdf_text_embedded.expected.json’, 
+
+  }, 
+
+  { 
+
+    Name: ‘PDF escaneado con OCR’, 
+
+    File: ‘02_pdf_scanned.pdf’, 
+
+    Expected: ‘02_pdf_scanned.expected.json’, 
+
+  }, 
+
+  { 
+
+    Name: ‘Imagen con OCR’, 
+
+    File: ‘03_image_ocr.png’, 
+
+    Expected: ‘03_image_ocr.expected.json’, 
+
+  }, 
+
+]; 
+
+ 
+
+Test.describe(‘document ingestion pipeline’, () => { 
+
+  For (const c of cases) { 
+
+    Test(c.name, async ({ page }) => { 
+
+      Const filePath = path.resolve(‘tests/fixtures’, c.file); 
+
+      Const expectedPath = path.resolve(‘tests/expected’, c.expected); 
+
+      Const expected = JSON.parse(fs.readFileSync(expectedPath, ‘utf-8’)); 
+
+ 
+
+      Await page.goto(‘/debug/ingestion’); 
+
+ 
+
+      Await page.getByTestId(‘document-input’).setInputFiles(filePath); 
+
+ 
+
+      Const output = page.getByTestId(‘ingestion-output’); 
+
+      Await expect(output).toBeVisible({ timeout: 120_000 }); 
+
+ 
+
+      Const actual = JSON.parse(await output.textContent() || ‘{}’); 
+
+ 
+
+      Expect(actual.source.extractionMode).toBe(expected.source.extractionMode); 
+
+      Expect(actual.documentType.type).toBe(expected.documentType.type); 
+
+      Expect(actual.fields).toMatchObject(expected.fields); 
+
+      Expect(actual.decision.status).toBe(expected.decision.status); 
+
+ 
+
+      For (const anchor of expected.text.mustContain) { 
+
+        Expect(actual.text.normalized).toContain(anchor); 
+
+      } 
+
+    }); 
+
+  } 
+
+}); 
+
+Clave: en OCR no conviene comparar el texto completo carácter por carácter. Conviene comparar: 
+
+JSON 
+
+{ 
+
+  “source”: { 
+
+    “extractionMode”: “ocr” 
+
+  }, 
+
+  “text”: { 
+
+    “mustContain”: [ 
+
+      “proveedor demo”, 
+
+      “fv-2026-001”, 
+
+      “total” 
+
+    ] 
+
+  }, 
+
+  “documentType”: { 
+
+    “type”: “invoice” 
+
+  }, 
+
+  “fields”: { 
+
+    “invoiceNumber”: “FV-2026-001”, 
+
+    “currency”: “EUR” 
+
+  }, 
+
+  “decision”: { 
+
+    “status”: “accepted” 
+
+  } 
+
+} 
+
+Así la validación es fuerte, pero no se rompe por una coma, un salto de línea o una ligera variación del OCR. 
+
+¿Frontend con browser automation o backend? 
+
+Para cerrar ahora 
+
+Frontend + Playwright. 
+
+Porque ya tenéis la lógica integrada. Rehacer ahora al backend puede abrir demasiados frentes: subida de archivos, storage, endpoints, workers, dependencias nativas, colas, seguridad, trazabilidad, etc. 
+
+Además, Vitest Browser Mode también permite ejecutar tests en navegador nativo con acceso a globals como window y document, pero para esta validación concreta yo priorizaría Playwright E2E, porque necesitáis reproducir subida real de archivos, comportamiento real del navegador y evidencia visual/traceable. � 
+
+Vitest +1 
+
+Para producto real 
+
+Backend. Sin duda. 
+
+Mi opinión: si el producto futuro incluye web, email, WhatsApp y backoffice, la ingestión documental no debería vivir como lógica principal en el navegador. El frontend puede seguir haciendo preview o prevalidación, pero la fuente de verdad debería estar en backend. 
+
+Motivos: 
+
+Criterio 
+
+Frontend OCR 
+
+Backend OCR 
+
+Cierre rápido 
+
+Mejor 
+
+Medio 
+
+Reproducibilidad 
+
+Media 
+
+Alta 
+
+Multi-canal 
+
+Mala 
+
+Alta 
+
+Auditoría 
+
+Limitada 
+
+Alta 
+
+Coste inicial 
+
+Bajo 
+
+Medio 
+
+Escalabilidad 
+
+Limitada 
+
+Mejor 
+
+Seguridad/control 
+
+Media 
+
+Alta 
+
+Reutilización email/WhatsApp 
+
+Mala 
+
+Alta 
+
+Conclusión práctica: 
+
+No reharía todo hoy. Pero sí haría que el pipeline quede ya separado como módulo: 
+
+Plain text 
+
+Src/document-pipeline/ 
+
+  extractText.ts 
+
+  classifyDocument.ts 
+
+  extractFields.ts 
+
+  decideCase.ts 
+
+  types.ts 
+
+Y después ese mismo contrato se mueve a backend. 
+
+Arquitectura mínima sensata para futuro multicanal 
+
+El siguiente paso mínimo serio sería este: 
+
+Plain text 
+
+Canales 
+
+  Web 
+
+  Email 
+
+  WhatsApp 
+
+  Backoffice 
+
+      │ 
+
+      ▼ 
+
+Document Ingestion API 
+
+  POST /documents/analyze 
+
+      │ 
+
+      ▼ 
+
+Storage 
+
+  Original file 
+
+  Extracted text 
+
+  Normalized JSON 
+
+  Audit log 
+
+      │ 
+
+      ▼ 
+
+Worker OCR / Extraction 
+
+  PDF text layer 
+
+  OCR scanned PDF 
+
+  OCR image 
+
+      │ 
+
+      ▼ 
+
+Document Intelligence 
+
+  Classify document type 
+
+  Extract fields 
+
+  Validate rules 
+
+  Final decision 
+
+      │ 
+
+      ▼ 
+
+Result API / UI 
+
+  Expediente 
+
+  Checklist 
+
+  Tyrion copilot 
+
+  CSV/export 
+
+  History 
+
+El contrato central debería ser un JSON estable: 
+
+TypeScript 
+
+Type IngestionResult = { 
+
+  documentId: string; 
+
+  filename: string; 
+
+  inputType: ‘pdf’ | ‘image’; 
+
+  extractionMode: ‘pdf-text’ | ‘ocr’ | ‘hybrid’ | ‘manual-review’; 
+
+  rawText: string; 
+
+  normalizedText: string; 
+
+  documentType: { 
+
+    type: string; 
+
+    confidence: number; 
+
+  }; 
+
+  Fields: Record<string, unknown>; 
+
+  Validations: Array<{ 
+
+    Code: string; 
+
+    Status: ‘pass’ | ‘fail’ | ‘warning’; 
+
+    Message: string; 
+
+  }>; 
+
+  Decision: { 
+
+    Status: ‘accepted’ | ‘rejected’ | ‘manual_review’; 
+
+    Reasons: string[]; 
+
+  }; 
+
+}; 
+
+Ese contrato es más importante que la herramienta OCR. Si mañana cambiáis tesseract.js por OCRmyPDF, PaddleOCR, Google Vision o Azure Document Intelligence, el resto del producto no debería romperse. 
+
+Alternativa ligera y robusta frente a tesseract.js 
+
+Tesseract.js tiene sentido para pruebas, privacidad local y prototipos: es una versión JavaScript/WebAssembly de Tesseract, corre en navegador y Node, soporta muchos idiomas y usa workers. � 
+
+Tesseract +1 
+
+Pero tiene una limitación importante para vuestro caso: no soporta PDF directamente; para PDF escaneado hay que renderizar páginas a imagen y luego pasar imagen al OCR. � 
+
+GitHub 
+
+Mi recomendación: 
+
+Opción A — barata y seria 
+
+Backend con: 
+
+Plain text 
+
+PDF con texto embebido: 
+
+  Pdf.js / PyMuPDF / pdfplumber 
+
+ 
+
+PDF escaneado: 
+
+  OCRmyPDF + Tesseract 
+
+ 
+
+Imagen: 
+
+  Tesseract nativo / EasyOCR / PaddleOCR 
+
+OCRmyPDF es especialmente útil para PDF escaneado porque añade una capa de texto OCR al PDF, haciéndolo buscable y reutilizable. Además, internamente usa Tesseract y puede aplicar procesamiento de imagen. � 
+
+Ocrmypdf.readthedocs.io +1 
+
+Opción B — más potente, algo más pesada 
+
+Backend Python con PaddleOCR o EasyOCR. 
+
+PaddleOCR apunta más a extracción OCR/documental avanzada y soporta imágenes/PDFs, múltiples idiomas y salidas estructuradas; EasyOCR es una librería Python preparada para extraer texto de imágenes y soporta más de 80 idiomas. � 
+
+GitHub +1 
+
+Para una pyme o MVP, yo no empezaría por lo más pesado. Empezaría así: 
+
+Plain text 
+
+1. PDF texto embebido → extracción directa 
+
+2. Si no hay texto suficiente → OCRmyPDF/Tesseract backend 
+
+3. Imagen → Tesseract backend 
+
+4. Casos dudosos → revisión manual 
+
+5. Camino más corto pero técnicamente serio 
+
+Fase 1 — cerrar validación esta semana sin rehacer 
+
+Haría esto: 
+
+Plain text 
+
+1. Crear 3 fixtures reales: 
+
+   - PDF texto embebido 
+
+   - PDF escaneado 
+
+   - Imagen 
+
+ 
+
+2. Crear /debug/ingestion en la app 
+
+   - input file 
+
+   - botón analizar 
+
+   - JSON final visible en data-testid=”ingestion-output” 
+
+ 
+
+3. Añadir Playwright 
+
+   - subir archivo real 
+
+   - esperar resultado 
+
+   - validar texto ancla 
+
+   - validar tipo documental 
+
+   - validar campos 
+
+   - validar decisión final 
+
+ 
+
+4. Guardar evidencia 
+
+   - JSON resultante 
+
+   - screenshot 
+
+   - trace.zip 
+
+   - HTML report 
+
+Comandos orientativos: 
+
+Bash 
+
+Npm install -D @playwright/test 
+
+Npx playwright install chromium 
+
+Script en package.json: 
+
+JSON 
+
+{ 
+
+  “scripts”: { 
+
+    “test:ingestion”: “playwright test tests/ingestion.spec.ts”, 
+
+    “test:ingestion:headed”: “playwright test tests/ingestion.spec.ts –headed”, 
+
+    “test:ingestion:report”: “playwright show-report” 
+
+  } 
+
+} 
+
+Configuración recomendable: 
+
+TypeScript 
+
+// playwright.config.ts 
+
+Import { defineConfig, devices } from ‘@playwright/test’; 
+
+ 
+
+Export default defineConfig({ 
+
+  testDir: ‘./tests’, 
+
+  timeout: 120_000, 
+
+  retries: 0, 
+
+  use: { 
+
+    baseURL: ‘http://localhost:5173’, 
+
+    trace: ‘on’, 
+
+    screenshot: ‘only-on-failure’, 
+
+    video: ‘retain-on-failure’, 
+
+  }, 
+
+  webServer: { 
+
+    command: ‘npm run dev -- --host 127.0.0.1’, 
+
+    url: ‘http://localhost:5173’, 
+
+    reuseExistingServer: ¡process.env.CI, 
+
+  }, 
+
+  Projects: [ 
+
+    { 
+
+      Name: ‘chromium’, 
+
+      Use: { …devices[‘Desktop Chrome’] }, 
+
+    }, 
+
+  ], 
+
+}); 
+
+Decisión recomendada 
+
+Yo lo resolvería así: 
+
+Ahora 
+
+No movería todavía todo a backend. 
+
+Cerraría evidencia con: 
+
+Plain text 
+
+Frontend actual + página debug + Playwright + fixtures + expected JSON 
+
+Eso os da validación real, reproducible y defendible. 
+
+Siguiente paso 
+
+Separaría el pipeline en una función pura: 
+
+TypeScript 
+
+analyzeDocument(file): Promise<IngestionResult> 
+
+Y después migraría esa función a: 
+
+Plain text 
+
+POST /documents/analyze 
+
+Producto multicanal 
+
+Ahí sí: 
+
+Plain text 
+
+OCR/extracción en backend 
+
+Frontend como canal de entrada y revisión 
+
+Email/WhatsApp/backoffice usando el mismo endpoint 
+
+Resumen ejecutivo 
+
+La respuesta más sensata sería: 
+
+Para validar ya: Playwright con navegador real, fixtures controlados y comparación contra JSON esperado. 
+
+Para producto: backend de ingestión/OCR con contrato estable IngestionResult. 
+
+Para OCR: mantener tesseract.js solo como solución temporal/frontend; mover a OCRmyPDF/Tesseract backend como primera opción robusta y barata. 
+
+Para no rehacer todo: encapsular el pipeline actual, exponer resultado JSON y crear tests E2E reproducibles con trazas. 
+
+Mi opinión: el error sería intentar cerrar esto con scripts Node que no representan el runtime real. Eso sí sería una chapuza. Browser automation ahora + backend después es el equilibrio correcto entre rapidez, evidencia y arquitectura seria. 
+
+Resumen ejecutivo 
+
+La respuesta más sensata sería: 
+
+Para validar ya: Playwright con navegador real, fixtures controlados y comparación contra JSON esperado. 
+
+Para producto: backend de ingestión/OCR con contrato estable IngestionResult. 
+
+Para OCR: mantener tesseract.js solo como solución temporal/frontend; mover a OCRmyPDF/Tesseract backend como primera opción robusta y barata. 
+
+Para no rehacer todo: encapsular el pipeline actual, exponer resultado JSON y crear tests E2E reproducibles con trazas. 
+
+Mi opinión: el error sería intentar cerrar esto con scripts Node que no representan el runtime real. Eso sí sería una chapuza. Browser automation ahora + backend después es el equilibrio correcto entre rapidez, evidencia y arquitectura seria. 
+
+ 
