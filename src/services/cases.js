@@ -2,10 +2,63 @@ import { supabase } from '../lib/supabase'
 import { DOCUMENT_TYPE_LABELS, getRequirementForCase } from '../domain/tyrion/index.js'
 import { logEvent } from './history'
 
+function buildNextPublicId(lastPublicId) {
+  const match = String(lastPublicId || '').match(/EXP-(\d+)$/i)
+  const next = (match ? Number(match[1]) : 0) + 1
+  return `EXP-${String(next).padStart(4, '0')}`
+}
+
 export async function fetchCases() {
   const { data, error } = await supabase.from('cases').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return data || []
+}
+
+export async function createProvisionalCase({ template = 'gestoria_dgt', businessLine = 'gestoria_dgt', sourceChannel = 'manual_upload' } = {}) {
+  const { data: latestCase, error: latestError } = await supabase
+    .from('cases')
+    .select('public_id')
+    .order('public_id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (latestError) throw latestError
+
+  const publicId = buildNextPublicId(latestCase?.public_id)
+
+  const { data, error } = await supabase
+    .from('cases')
+    .insert({
+      public_id: publicId,
+      client_name: 'Pendiente identificar',
+      vehicle_plate: null,
+      case_type: 'pending_classification',
+      status: 'received',
+      workflow_template: template,
+      requirement_template: template,
+      business_line: businessLine,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+
+  await logEvent({
+    organizationId: data.organization_id,
+    caseId: data.id,
+    action: 'provisional_case_created',
+    entityType: 'case',
+    entityId: data.id,
+    metadata: {
+      public_id: data.public_id,
+      source_channel: sourceChannel,
+      template,
+      case_type: data.case_type,
+      status: data.status,
+    },
+  })
+
+  return data
 }
 
 export async function updateCaseStatus(caseId, status) {

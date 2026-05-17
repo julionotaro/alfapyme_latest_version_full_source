@@ -4,6 +4,7 @@ export {
   reconcileChecklistTemplate,
   updateCaseStatus,
   updateChecklist,
+  createProvisionalCase,
 } from './cases'
 
 export {

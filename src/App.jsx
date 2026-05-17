@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  createProvisionalCase,
   fetchCases,
   fetchChecklist,
   fetchDocuments,
@@ -145,20 +146,31 @@ export default function App() {
     setMessage('Caso listo para salida.')
   }
 
-  async function handleUploadFiles(files) {
-    if (!selected) return
+  async function handleUploadFiles(files, preferredCase = null) {
+    let targetCase = preferredCase || selected
+
+    if (!targetCase) {
+      targetCase = await createProvisionalCase({
+        template: selectedBusinessTemplate?.key || 'gestoria_dgt',
+        businessLine: selectedBusinessTemplate?.key || 'gestoria_dgt',
+        sourceChannel: 'manual_upload',
+      })
+      setSelected(targetCase)
+      setCases((current) => [targetCase, ...current])
+    }
 
     for (const file of files) {
       await uploadDocument({
-        caseId: selected.id,
-        organizationId: selected.organization_id,
+        caseId: targetCase.id,
+        organizationId: targetCase.organization_id,
         file,
       })
     }
 
-    await loadCaseDetails(selected.id)
     await loadCasesList()
-    setMessage(`${files.length} documento(s) cargados.`)
+    await loadCaseDetails(targetCase.id)
+    setSelected(targetCase)
+    setMessage(`${files.length} documento(s) cargados en ${targetCase.public_id}.`)
   }
 
   async function inspectUploadFiles(files) {

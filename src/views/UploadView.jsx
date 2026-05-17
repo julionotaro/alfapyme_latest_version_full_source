@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { UploadCloud } from 'lucide-react'
 
+const NEW_PROVISIONAL_VALUE = '__new_provisional__'
+
 export function UploadView({ selected, selectedBusinessTemplate, cases, setSelected, onUploadFiles, onInspectFiles, inspections = [] }) {
   const [isOver, setIsOver] = useState(false)
   const [files, setFiles] = useState([])
@@ -15,15 +17,28 @@ export function UploadView({ selected, selectedBusinessTemplate, cases, setSelec
       )}
 
       <select
-        value={selected?.id || ''}
-        onChange={(event) => setSelected(cases.find((currentCase) => currentCase.id === event.target.value))}
+        value={selected?.id || NEW_PROVISIONAL_VALUE}
+        onChange={(event) => {
+          if (event.target.value === NEW_PROVISIONAL_VALUE) {
+            setSelected(null)
+            return
+          }
+          setSelected(cases.find((currentCase) => currentCase.id === event.target.value) || null)
+        }}
       >
+        <option value={NEW_PROVISIONAL_VALUE}>Nuevo expediente provisional</option>
         {cases.map((currentCase) => (
           <option key={currentCase.id} value={currentCase.id}>
             {currentCase.public_id} · {currentCase.client_name}
           </option>
         ))}
       </select>
+
+      {!selected && (
+        <p>
+          Si aún no sabes el trámite, sube el primer documento y Alfa‑Pyme abrirá un expediente provisional automáticamente.
+        </p>
+      )}
 
       <div
         className={`drop ${isOver ? 'over' : ''}`}
@@ -56,7 +71,7 @@ export function UploadView({ selected, selectedBusinessTemplate, cases, setSelec
             <p key={`${file.name}-${file.size}`}>{file.name}</p>
           ))}
           <button onClick={() => onInspectFiles(files)}>Preanalizar archivos</button>
-          <button className="primary" onClick={() => onUploadFiles(files)}>
+          <button className="primary" onClick={() => onUploadFiles(files, selected || null)}>
             Subir archivos
           </button>
         </div>
