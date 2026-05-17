@@ -1,6 +1,6 @@
-# Alfa-Pyme Ops Cockpit MVP
+# Alfa-Pyme Ops Cockpit MVP — v0.6.1
 
-> **Versión de trabajo actual: v0.6.0 · rama principal sincronizada para GitHub/Vercel**
+> **Versión de trabajo actual: v0.6.1 · rama principal sincronizada para GitHub/Vercel**
 
 MVP operacional para gestorías orientado a expedientes documentales, validación humana y preparación de salidas hacia distintos canales.
 
@@ -79,7 +79,7 @@ Bootstrap recomendado en este orden:
 3. `supabase/storage_setup.sql`
 4. `supabase/seed_demo.sql`
 
-Ese flujo deja creado el schema base, el bucket `case-documents`, las RPCs y un caso demo inicial.
+Ese flujo deja creado el schema base, el bucket `case-documents` y las RPCs base, pero ya no inserta expedientes ficticios por defecto.
 
 Guía detallada:
 - `docs/supabase-bootstrap.md`
