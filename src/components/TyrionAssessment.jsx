@@ -22,6 +22,7 @@ export function TyrionAssessment({ assessment }) {
     lowConfidenceDocuments,
     automaticValidations,
     automaticValidationResults,
+    failedCrossValidations,
     actionableEscalations,
   } = assessment
 
@@ -46,6 +47,19 @@ export function TyrionAssessment({ assessment }) {
       <div className="tyrion-next-step">
         <b>Siguiente paso sugerido:</b> {decision.actionHint}
       </div>
+
+      {failedCrossValidations?.length > 0 && (
+        <div className="low tyrion-low-confidence">
+          <b>Bloqueos operativos detectados:</b>
+          <ul>
+            {failedCrossValidations.map((item) => (
+              <li key={item.code}>
+                <b>{item.label}:</b> {item.detail}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="tyrion-grid">
         <div>
@@ -89,13 +103,17 @@ export function TyrionAssessment({ assessment }) {
           <h4>
             <ShieldAlert size={16} /> Escalado humano
           </h4>
-          <ul>
-            {actionableEscalations.map((item) => (
-              <li key={item.reason}>
-                {item.label} <small>→ revisar: {item.owner}</small>
-              </li>
-            ))}
-          </ul>
+          {actionableEscalations.length > 0 ? (
+            <ul>
+              {actionableEscalations.map((item) => (
+                <li key={item.reason}>
+                  {item.label} <small>→ revisar: {item.owner}</small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>Sin escalados humanos activos.</p>
+          )}
         </div>
       </div>
 

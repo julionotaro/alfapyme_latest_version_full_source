@@ -5,6 +5,7 @@ import { CASE_STATUS_LABELS } from '../constants'
 export function WorkspaceView({
   cases,
   selected,
+  selectedBusinessTemplate,
   setSelected,
   checklist,
   documents,
@@ -42,6 +43,11 @@ export function WorkspaceView({
       <section className="panel">
         <h3>{selected?.public_id || 'Sin caso'}</h3>
         <p>{selected?.client_name}</p>
+        {selectedBusinessTemplate && (
+          <p>
+            <b>Template:</b> {selectedBusinessTemplate.label} <small>· vertical {selectedBusinessTemplate.vertical}</small>
+          </p>
+        )}
 
         {tyrionTransition && (
           <div className="tyrion-transition-box">

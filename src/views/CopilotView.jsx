@@ -77,6 +77,28 @@ export function CopilotView() {
             <p>Matrícula: {currentCase.cases?.vehicle_plate}</p>
             <p>Estado sesión: {currentCase.status}</p>
 
+            {currentCase.prepared_fields && (
+              <div className="card">
+                <h4>Campos preparados</h4>
+                {Object.entries(currentCase.prepared_fields).map(([key, value]) => (
+                  <p key={key}>
+                    <b>{key}:</b> {String(value || '')}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {currentCase.warnings?.length > 0 && (
+              <div className="low tyrion-low-confidence">
+                <b>Warnings</b>
+                <ul>
+                  {currentCase.warnings.map((warning, idx) => (
+                    <li key={`${warning.code || 'warning'}-${idx}`}>{warning.code || String(warning)}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="bar">
               <button className="primary" onClick={() => setStatus('completed')}>
                 <CheckCircle2 size={14} /> Presentado

@@ -66,11 +66,25 @@ export function OutputView() {
       </div>
 
       {tab === 'queue' && (
-        <List
-          title="Cola de salida"
-          rows={queue}
-          cols={['case_type', 'output_route', 'output_mode', 'status', 'destination_system']}
-        />
+        <section className="card">
+          <h3>Cola de salida</h3>
+          {queue.length ? (
+            queue.map((row) => (
+              <div className="row" key={row.id}>
+                <span>{row.public_id || row.cases?.public_id}</span>
+                <span>{row.case_type}</span>
+                <span>{row.output_mode}</span>
+                <span>{row.output_route}</span>
+                <span>{row.destination_system}</span>
+                <span>{row.status}</span>
+                <span>{row.payload_status || 'ready'}</span>
+                <span>{row.ready ? 'ready' : formatReasons(row.readiness_reasons)}</span>
+              </div>
+            ))
+          ) : (
+            <p>Sin registros.</p>
+          )}
+        </section>
       )}
 
       {tab === 'batches' && (
@@ -82,6 +96,7 @@ export function OutputView() {
               <span>{batch.case_type}</span>
               <span>{batch.total_cases} casos</span>
               <span>{batch.status}</span>
+              <span>{batch.payload_status || 'ready'}</span>
               <button onClick={() => exportCsv(batch)}>
                 <Download size={14} /> CSV
               </button>
@@ -140,13 +155,22 @@ function JobsPanel({ rows, reload }) {
         <div className="row" key={job.id}>
           <span>{job.output_route}</span>
           <span>{job.destination_system}</span>
+          <span>{job.output_mode}</span>
           <span>{job.status}</span>
+          <span>{job.payload_status || 'ready'}</span>
           <span>
             {job.attempts}/{job.max_attempts}
           </span>
+          <span>{job.preview || job.last_error || ''}</span>
+          <span>{job.payload_issues?.length ? formatReasons(job.payload_issues) : ''}</span>
           <button onClick={() => simulateFailure(job)}>simular fallo</button>
         </div>
       ))}
     </section>
   )
+}
+
+function formatReasons(reasons = []) {
+  if (!reasons?.length) return 'sin bloqueos visibles'
+  return reasons.map((item) => item.code).join(', ')
 }

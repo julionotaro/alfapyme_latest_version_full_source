@@ -40,8 +40,19 @@ export function ViewerView({ selected, documents, activeDoc, setActiveDoc, docUr
               <b>Confianza:</b> {activeDoc.confidence}
             </p>
             <p>
+              <b>Fuente de ingesta:</b> {activeDoc.ai_payload?.ingestion_source || 'desconocida'}
+            </p>
+            <p>
+              <b>Páginas:</b> {activeDoc.ai_payload?.ingestion_page_count || 0} · procesadas {activeDoc.ai_payload?.ingestion_pages_processed || 0}
+            </p>
+            <p>
               <b>OCR:</b> {activeDoc.ocr_text}
             </p>
+            {activeDoc.ai_payload?.ingestion_warnings?.length > 0 && (
+              <p>
+                <b>Warnings:</b> {activeDoc.ai_payload.ingestion_warnings.join(', ')}
+              </p>
+            )}
             {Number(activeDoc.confidence) < 0.85 && (
               <div className="low">Baja confianza: requiere revisión humana.</div>
             )}

@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "dataset:generate": "node scripts/generate_synthetic_dgt_dataset.mjs",
-    "dataset:validate": "node --experimental-specifier-resolution=node scripts/validate_synthetic_dataset.mjs"
+    "dataset:validate": "node --experimental-specifier-resolution=node scripts/validate_synthetic_dataset.mjs",
+    "ingestion:validate": "node scripts/validate_ingestion_pipeline.mjs",
+    "outputs:validate": "node scripts/validate_output_contracts.mjs",
+    "fixtures:realistic": "python3 scripts/generate_realistic_fixtures.py",
+    "fixtures:validate-realistic": "node scripts/validate_realistic_fixtures.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.105.4",

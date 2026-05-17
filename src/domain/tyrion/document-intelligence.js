@@ -110,16 +110,88 @@ function unique(values = []) {
   return [...new Set(values.filter(Boolean))]
 }
 
+const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE'
+
+function computeDniLetter(numberText) {
+  const numeric = String(numberText || '').replace(/\D/g, '')
+  if (!/^\d{8}$/.test(numeric)) return null
+  return DNI_LETTERS[Number(numeric) % 23]
+}
+
+function recoverDniCandidates(text) {
+  const recovered = []
+  const matches = [...text.matchAll(/(?:dni|nie|documento nacional identidad|dn)[:\s]*([0-9oilsbzg]{8,9})([a-z0-9]?)/gi)]
+
+  for (const match of matches) {
+    const raw = `${match[1] || ''}${match[2] || ''}`.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    const normalizedDigits = raw
+      .replace(/[OQ]/g, '0')
+      .replace(/[IL]/g, '1')
+      .replace(/S/g, '5')
+      .replace(/B/g, '8')
+      .replace(/G/g, '6')
+      .replace(/Z/g, '2')
+
+    const numeric = normalizedDigits.replace(/[^0-9]/g, '')
+    if (numeric.length >= 8) {
+      const base = numeric.slice(0, 8)
+      const letter = computeDniLetter(base)
+      if (letter) recovered.push(`${base}${letter}`)
+    }
+  }
+
+  return recovered
+}
+
+function normalizeOcrDigits(value = '') {
+  return String(value)
+    .toUpperCase()
+    .replace(/[OQ]/g, '0')
+    .replace(/[IL]/g, '1')
+    .replace(/S/g, '5')
+    .replace(/B/g, '8')
+    .replace(/G/g, '6')
+    .replace(/Z/g, '2')
+}
+
+function recoverPlateCandidates(text) {
+  const recovered = []
+  const matches = [...text.matchAll(/(?:matricula|matr[íi]cula)[:\s.-]*([0-9OQILSBZG]{4,5})\s*([A-Z]{3})/gi)]
+
+  for (const match of matches) {
+    let digits = normalizeOcrDigits(match[1]).replace(/\D/g, '')
+    const letters = String(match[2] || '').replace(/[^A-Z]/g, '').toUpperCase()
+
+    if (digits.length === 5 && digits[0] === digits[1]) {
+      digits = digits.slice(1)
+    }
+
+    if (digits.length === 5) {
+      digits = digits.slice(0, 4)
+    }
+
+    if (digits.length === 4 && letters.length === 3) {
+      recovered.push(`${digits}${letters}`)
+    }
+  }
+
+  return recovered
+}
+
 function extractFields(rawText) {
   const text = rawText || ''
   const normalized = normalize(text)
 
-  const plateMatches = [...normalized.matchAll(/\b([0-9]{4}[a-z]{3}|[a-z]{1,2}[- ]?[0-9]{4}[- ]?[a-z]{1,2})\b/g)].map(
-    (match) => match[1].replace(/[^a-z0-9]/g, '').toUpperCase(),
-  )
-  const dniMatches = [...normalized.matchAll(/\b([0-9]{7,8}[a-z]|[xyz][0-9]{7}[a-z])\b/g)].map((match) =>
-    match[1].toUpperCase(),
-  )
+  const plateMatches = unique([
+    ...[...normalized.matchAll(/\b([0-9]{4}[a-z]{3}|[a-z]{1,2}[- ]?[0-9]{4}[- ]?[a-z]{1,2})\b/g)].map(
+      (match) => match[1].replace(/[^a-z0-9]/g, '').toUpperCase(),
+    ),
+    ...recoverPlateCandidates(text),
+  ])
+  const dniMatches = unique([
+    ...[...normalized.matchAll(/\b([0-9]{7,8}[a-z]|[xyz][0-9]{7}[a-z])\b/g)].map((match) => match[1].toUpperCase()),
+    ...recoverDniCandidates(text),
+  ])
   const names = unique([
     firstMatch(/(?:comprador|buyer):\s*([^\n]{4,})/i, text)?.trim(),
     firstMatch(/(?:vendedor|seller):\s*([^\n]{4,})/i, text)?.trim(),

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ingestion Lab</title>
+    <style>
+      body { font-family: sans-serif; margin: 24px; background: #0f172a; color: #e2e8f0; }
+      .card { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 16px; max-width: 1000px; }
+      button { margin: 12px 0; padding: 10px 16px; }
+      pre { white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 8px; max-height: 420px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Ingestion Lab</h1>
+      <p>Sube uno o más archivos para inspeccionar el pipeline real de ingesta en navegador.</p>
+      <input id="files" type="file" multiple accept=".pdf,image/*,.txt,.md,.csv,.json" />
+      <div><button id="run">Preanalizar</button></div>
+      <pre id="output">Esperando archivos...</pre>
+    </div>
+    <script type="module" src="/src/ingestion-lab.js"></script>
+  </body>
+  </html>

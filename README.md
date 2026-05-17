@@ -1,5 +1,7 @@
 # Alfa-Pyme Ops Cockpit MVP
 
+> **Versión de trabajo actual: v0.6.0 · rama principal sincronizada para GitHub/Vercel**
+
 MVP operacional para gestorías orientado a expedientes documentales, validación humana y preparación de salidas hacia distintos canales.
 
 ## Stack
@@ -83,8 +85,17 @@ Guía detallada:
 - `docs/supabase-bootstrap.md`
 
 ## Estado honesto
-La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP:
-- hay simulación en clasificación/OCR/confianza
+La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP.
+
+### Último frente trabajado incluido en esta versión
+- validación de ingesta documental (`ingestion:validate`)
+- validación de contratos de salida (`outputs:validate`)
+- endurecimiento de la capa de outputs y payloads
+- fixtures realistas y utilidades de prueba para lote documental
+- estructura preparada para gran prueba real con PDF e imágenes desde Vercel
+
+### Límites actuales
+- hay simulación en partes de clasificación/OCR/confianza
 - faltan integraciones reales del execution engine
 - las policies SQL incluidas siguen siendo demasiado abiertas para producción
 - el cockpit y los lotes están pensados para validación operativa, no todavía para operación final endurecida

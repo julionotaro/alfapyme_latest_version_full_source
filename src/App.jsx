@@ -9,7 +9,9 @@ import {
   updateChecklist,
   uploadDocument,
 } from './services/core'
-import { evaluateExpedient, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion'
+import { evaluateExpedient, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion/index.js'
+import { inspectDocument } from './lib/document-ingestion'
+import { getBusinessTemplate } from './domain/templates/index.js'
 import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
 import { FlashMessage } from './components/FlashMessage'
@@ -32,6 +34,9 @@ export default function App() {
   const [message, setMessage] = useState('')
   const [tyrionAssessment, setTyrionAssessment] = useState(null)
   const [tyrionTransition, setTyrionTransition] = useState(null)
+  const [uploadInspections, setUploadInspections] = useState([])
+
+  const selectedBusinessTemplate = useMemo(() => getBusinessTemplate(selected || {}), [selected])
 
   async function loadCasesList() {
     try {
@@ -156,6 +161,18 @@ export default function App() {
     setMessage(`${files.length} documento(s) cargados.`)
   }
 
+  async function inspectUploadFiles(files) {
+    const results = []
+
+    for (const file of files) {
+      const inspection = await inspectDocument(file)
+      results.push(inspection)
+    }
+
+    setUploadInspections(results)
+    setMessage(`Preanálisis completado para ${results.length} documento(s).`)
+  }
+
   return (
     <div className="app">
       <Sidebar view={view} onChange={setView} />
@@ -168,6 +185,7 @@ export default function App() {
           <WorkspaceView
             cases={cases}
             selected={selected}
+            selectedBusinessTemplate={selectedBusinessTemplate}
             setSelected={setSelected}
             checklist={checklist}
             documents={documents}
@@ -185,9 +203,12 @@ export default function App() {
         {view === 'upload' && (
           <UploadView
             selected={selected}
+            selectedBusinessTemplate={selectedBusinessTemplate}
             cases={cases}
             setSelected={setSelected}
             onUploadFiles={handleUploadFiles}
+            inspections={uploadInspections}
+            onInspectFiles={inspectUploadFiles}
           />
         )}
 

@@ -1,4 +1,5 @@
 import { DOCUMENT_TYPES } from './document-types.js'
+import { BUSINESS_TEMPLATE_IDS, getBusinessTemplate } from '../templates/index.js'
 
 const BASE_DOCUMENT_INTAKE_TEMPLATE = {
   id: 'base_document_intake',
@@ -119,11 +120,12 @@ const GESTORIA_DGT_TEMPLATE = {
 }
 
 export const REQUIREMENT_TEMPLATES = {
-  gestoria_dgt: GESTORIA_DGT_TEMPLATE,
+  [BUSINESS_TEMPLATE_IDS.GESTORIA_DGT]: GESTORIA_DGT_TEMPLATE,
 }
 
 function resolveTemplateKey(caseData) {
-  return caseData?.requirement_template || caseData?.workflow_template || caseData?.business_line || 'gestoria_dgt'
+  const businessTemplate = getBusinessTemplate(caseData)
+  return caseData?.requirement_template || caseData?.workflow_template || caseData?.business_line || businessTemplate.id
 }
 
 export function getRequirementTemplate(caseData) {

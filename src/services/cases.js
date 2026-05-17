@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { DOCUMENT_TYPE_LABELS, getRequirementForCase } from '../domain/tyrion'
+import { DOCUMENT_TYPE_LABELS, getRequirementForCase } from '../domain/tyrion/index.js'
 import { logEvent } from './history'
 
 export async function fetchCases() {

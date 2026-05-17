@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { analyzeDocument, buildSimulatedOcrText } from '../domain/tyrion/index.js'
-import { extractDocumentText } from '../lib/document-ingestion'
+import { inspectDocument } from '../lib/document-ingestion'
 import { logEvent } from './history'
 
 const BUCKET = 'case-documents'
@@ -31,9 +31,9 @@ export async function uploadDocument({ caseId, organizationId, file }) {
   const upload = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
   if (upload.error) throw upload.error
 
-  const extraction = await extractDocumentText(file)
-  const rawDocumentText = extraction.text?.trim() ? extraction.text : buildSimulatedOcrText(file)
-  const analysis = analyzeDocument({ fileName: file.name, ocrText: rawDocumentText })
+  const inspection = await inspectDocument(file)
+  const rawDocumentText = inspection.text?.trim() ? inspection.text : buildSimulatedOcrText(file)
+  const analysis = inspection.analysis || analyzeDocument({ fileName: file.name, ocrText: rawDocumentText })
   const documentType = analysis.documentType
   const confidence = analysis.confidence
 
@@ -56,7 +56,12 @@ export async function uploadDocument({ caseId, organizationId, file }) {
         confidence,
         extracted_fields: analysis.extractedFields,
         normalized_text: analysis.normalizedText,
-        ingestion_source: extraction.source,
+        ingestion_source: inspection.source,
+        ingestion_document_kind: inspection.documentKind,
+        ingestion_page_count: inspection.pageCount,
+        ingestion_pages_processed: inspection.pagesProcessed,
+        ingestion_warnings: inspection.warnings,
+        ingestion_error: inspection.error,
       },
     })
     .select()
@@ -78,9 +83,10 @@ export async function uploadDocument({ caseId, organizationId, file }) {
       document_type: documentType,
       confidence,
       extracted_fields: analysis.extractedFields,
+      ingestion_source: inspection.source,
+      ingestion_warnings: inspection.warnings,
     },
   })
 
   return data
 }
-
