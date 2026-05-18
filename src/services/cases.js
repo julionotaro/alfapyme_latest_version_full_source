@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { DOCUMENT_TYPE_LABELS, getRequirementForCase } from '../domain/tyrion/index.js'
+import { DOCUMENT_TYPE_LABELS, getCompatibleDocumentTypes, getRequirementForCase, resolveCanonicalDocumentType } from '../domain/tyrion/index.js'
 import { logEvent } from './history'
 
 function buildNextPublicId(lastPublicId) {
@@ -121,7 +121,15 @@ function findChecklistMatch(checklist = [], documentType, label) {
 }
 
 function findDocumentMatch(documents = [], documentType) {
-  return documents.find((document) => normalize(document.document_type) === normalize(documentType)) || null
+  const compatible = getCompatibleDocumentTypes(documentType).map((value) => normalize(value))
+
+  return (
+    documents.find((document) => {
+      const currentType = normalize(document.document_type)
+      const canonicalType = normalize(resolveCanonicalDocumentType(document.document_type))
+      return compatible.includes(currentType) || compatible.includes(canonicalType)
+    }) || null
+  )
 }
 
 function resolveValidationStatus(document, isBlocking) {

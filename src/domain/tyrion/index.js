@@ -14,6 +14,12 @@ export {
   getHumanReviewOwner,
 } from './human-review-rules.js'
 export { detectMockDocumentType } from './mock-classifier.js'
+export {
+  TRANSFERENCIA_DOCUMENT_CATALOG,
+  getDocumentCatalogEntry,
+  resolveCanonicalDocumentType,
+  getCompatibleDocumentTypes,
+} from './document-catalog.js'
 export { analyzeDocument, buildSimulatedOcrText } from './document-intelligence.js'
 export { evaluateExpedient } from './validation-rules.js'
 export { projectChecklistFromRequirement } from './checklist-projection.js'

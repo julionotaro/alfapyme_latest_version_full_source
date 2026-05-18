@@ -1,6 +1,7 @@
 import { DOCUMENT_TYPES } from './document-types.js'
+import { TRANSFERENCIA_DOCUMENT_CATALOG, getDocumentCatalogEntry, resolveCanonicalDocumentType } from './document-catalog.js'
 
-const TYPE_RULES = [
+const BASE_RULES = [
   {
     type: DOCUMENT_TYPES.PERMISO_CIRCULACION,
     keywords: ['permiso circulacion', 'permiso de circulacion', 'circulation permit'],
@@ -162,20 +163,28 @@ function recoverPlateCandidates(text) {
     let digits = normalizeOcrDigits(match[1]).replace(/\D/g, '')
     const letters = String(match[2] || '').replace(/[^A-Z]/g, '').toUpperCase()
 
-    if (digits.length === 5 && digits[0] === digits[1]) {
-      digits = digits.slice(1)
-    }
+    if (digits.length === 5 && digits[0] === digits[1]) digits = digits.slice(1)
+    if (digits.length === 5) digits = digits.slice(0, 4)
 
-    if (digits.length === 5) {
-      digits = digits.slice(0, 4)
-    }
-
-    if (digits.length === 4 && letters.length === 3) {
-      recovered.push(`${digits}${letters}`)
-    }
+    if (digits.length === 4 && letters.length === 3) recovered.push(`${digits}${letters}`)
   }
 
   return recovered
+}
+
+function extractIssuer(rawText = '', normalized = '') {
+  const issuers = [
+    { label: 'agencia_tributaria', signals: ['agencia tributaria', 'agencia estatal de administracion tributaria'] },
+    { label: 'ministerio_del_interior', signals: ['ministerio del interior'] },
+    { label: 'direccion_general_de_trafico', signals: ['direccion general de trafico', 'jefatura de trafico', 'dgt'] },
+    { label: 'itv', signals: ['inspeccion tecnica de vehiculos', 'tarjeta itv', 'estacion itv'] },
+  ]
+
+  for (const issuer of issuers) {
+    if (issuer.signals.some((signal) => normalized.includes(normalize(signal)))) return issuer.label
+  }
+
+  return null
 }
 
 function extractFields(rawText) {
@@ -201,10 +210,15 @@ function extractFields(rawText) {
   const buyerName = firstMatch(/(?:comprador|buyer):\s*([^\n]{4,})/i, text)?.trim() || null
   const sellerName = firstMatch(/(?:vendedor|seller):\s*([^\n]{4,})/i, text)?.trim() || null
   const ownerName = firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim() || null
-  const amount = firstMatch(/(?:importe|precio|total)[:\s€]*([0-9]+(?:[.,][0-9]{2})?)/i, text)
+  const amount = firstMatch(/(?:importe|precio|total|valor declarado|importe a ingresar)[:\s€]*([0-9]+(?:[.,][0-9]{2})?)/i, text)
   const date = firstMatch(/\b([0-3]?\d[\/.-][0-1]?\d[\/.-](?:20)?\d{2})\b/, text)
   const address = firstMatch(/(?:domicilio|direccion|dirección)[:\s]+([^\n,]{5,})/i, text)?.trim() || null
   const vin = firstMatch(/\b([a-hj-npr-z0-9]{17})\b/i, normalized)?.toUpperCase() || null
+  const issuer = extractIssuer(text, normalized)
+  const formCodes = unique([
+    ...[...normalized.matchAll(/\bmodelo\s*(620|621)\b/g)].map((match) => `modelo_${match[1]}`),
+    ...[...normalized.matchAll(/\btasa\s*([14])[\.,]?([145])\b/g)].map((match) => `tasa_${match[1]}_${match[2]}`),
+  ])
 
   return {
     plates: unique(plateMatches),
@@ -217,6 +231,8 @@ function extractFields(rawText) {
     date,
     address,
     vin,
+    issuer,
+    formCodes,
   }
 }
 
@@ -231,6 +247,23 @@ function scoreRule(rule, text) {
   return score
 }
 
+function scoreCatalogEntry(entry, normalizedText) {
+  let score = 0
+  for (const hint of entry.issuerHints || []) {
+    if (normalizedText.includes(normalize(hint))) score += 4
+  }
+  for (const hint of entry.keywordHints || []) {
+    if (normalizedText.includes(normalize(hint))) score += 4
+  }
+  for (const signal of entry.strongSignals || []) {
+    if (normalizedText.includes(normalize(signal))) score += 1.5
+  }
+  for (const regex of entry.regexSignals || []) {
+    if (regex.test(normalizedText)) score += 5
+  }
+  return score
+}
+
 function inferRole(type, normalizedText) {
   if (type === DOCUMENT_TYPES.DNI) {
     if (normalizedText.includes('comprador')) return DOCUMENT_TYPES.DNI_COMPRADOR
@@ -238,6 +271,18 @@ function inferRole(type, normalizedText) {
   }
 
   return type
+}
+
+function inferTramiteHints(bestType, normalizedText) {
+  const hints = []
+  const catalogEntry = getDocumentCatalogEntry(bestType)
+  if (catalogEntry?.tramites?.length) hints.push(...catalogEntry.tramites)
+
+  if (normalizedText.includes('cambio de titularidad') || normalizedText.includes('transferencia del vehiculo') || normalizedText.includes('contrato de compraventa')) {
+    hints.push('transferencia')
+  }
+
+  return unique(hints)
 }
 
 export function analyzeDocument({ fileName = '', ocrText = '' }) {
@@ -248,7 +293,15 @@ export function analyzeDocument({ fileName = '', ocrText = '' }) {
   let bestType = DOCUMENT_TYPES.DOCUMENTO_TRAFICO
   let bestScore = 0
 
-  for (const rule of TYPE_RULES) {
+  for (const entry of TRANSFERENCIA_DOCUMENT_CATALOG) {
+    const score = scoreCatalogEntry(entry, normalizedText)
+    if (score > bestScore) {
+      bestScore = score
+      bestType = entry.type
+    }
+  }
+
+  for (const rule of BASE_RULES) {
     const score = scoreRule(rule, normalizedText)
     if (score > bestScore) {
       bestScore = score
@@ -265,13 +318,18 @@ export function analyzeDocument({ fileName = '', ocrText = '' }) {
     bestScore = 2
   }
 
-  const confidence = Math.max(0.55, Math.min(0.97, 0.55 + bestScore * 0.06 + (extractedFields.plates.length > 0 ? 0.06 : 0)))
+  const confidence = Math.max(0.55, Math.min(0.98, 0.52 + bestScore * 0.045 + (extractedFields.plates.length > 0 ? 0.06 : 0)))
+  const canonicalType = resolveCanonicalDocumentType(bestType)
+  const tramites = inferTramiteHints(bestType, normalizedText)
 
   return {
     documentType: bestType,
+    canonicalType,
     confidence: Number(confidence.toFixed(2)),
     extractedFields,
     normalizedText,
+    catalogEntry: getDocumentCatalogEntry(bestType),
+    tramiteHints: tramites,
   }
 }
 

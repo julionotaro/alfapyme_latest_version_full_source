@@ -1,0 +1,139 @@
+import { DOCUMENT_TYPES } from './document-types.js'
+
+export const DOCUMENT_CANONICAL_TYPES = {
+  [DOCUMENT_TYPES.MODELO_620]: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+  [DOCUMENT_TYPES.MODELO_621]: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+  [DOCUMENT_TYPES.TASA_DGT_1_5]: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+  [DOCUMENT_TYPES.TASA_DGT_4_1]: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+  [DOCUMENT_TYPES.TASA_DGT_4_4]: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+}
+
+export const TRANSFERENCIA_DOCUMENT_CATALOG = [
+  {
+    type: DOCUMENT_TYPES.MODELO_620,
+    label: 'Modelo 620 · ITP transmisión patrimonial',
+    canonicalType: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+    family: 'transferencia',
+    issuerHints: ['agencia tributaria', 'agencia tributaria de andalucia', 'consejeria de hacienda'],
+    keywordHints: ['modelo 620', 'impuesto sobre transmisiones patrimoniales', 'itp', 'autoliquidacion'],
+    strongSignals: ['transmitente', 'adquirente', 'fecha devengo', 'sujeto pasivo', 'valor declarado'],
+    regexSignals: [/modelo\s*62[01]/i, /transmisiones patrimoniales/i, /autoliquidaci[oó]n/i],
+    tramites: ['transferencia', 'aceptacion_venta'],
+  },
+  {
+    type: DOCUMENT_TYPES.MODELO_621,
+    label: 'Modelo 621 · ITP transmisión online',
+    canonicalType: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+    family: 'transferencia',
+    issuerHints: ['agencia tributaria'],
+    keywordHints: ['modelo 621', 'itp', 'transmisiones patrimoniales', 'autoliquidacion'],
+    strongSignals: ['adquirente', 'transmitente', 'vehiculo', 'importe a ingresar'],
+    regexSignals: [/modelo\s*621/i, /transmisiones patrimoniales/i],
+    tramites: ['transferencia', 'aceptacion_venta'],
+  },
+  {
+    type: DOCUMENT_TYPES.TASA_DGT_1_5,
+    label: 'Tasa DGT 1.5 · Transferencia',
+    canonicalType: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+    family: 'transferencia',
+    issuerHints: ['direccion general de trafico', 'ministerio del interior', 'dgt'],
+    keywordHints: ['tasa 1.5', 'tasa i.5', 'cambio de titularidad', 'transferencia del vehiculo'],
+    strongSignals: ['numero de tasa', 'nrc', 'jefatura de trafico', 'importe tasa'],
+    regexSignals: [/tasa\s*[1il][\.,]?5/i, /cambio de titularidad/i, /ministerio del interior/i],
+    tramites: ['transferencia', 'aceptacion_venta'],
+  },
+  {
+    type: DOCUMENT_TYPES.TASA_DGT_4_1,
+    label: 'Tasa DGT 4.1',
+    canonicalType: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+    family: 'dgt_generica',
+    issuerHints: ['direccion general de trafico', 'ministerio del interior', 'dgt'],
+    keywordHints: ['tasa 4.1'],
+    strongSignals: ['numero de tasa', 'nrc', 'jefatura de trafico'],
+    regexSignals: [/tasa\s*4[\.,]?1/i],
+    tramites: ['notificacion_venta', 'baja_temporal'],
+  },
+  {
+    type: DOCUMENT_TYPES.TASA_DGT_4_4,
+    label: 'Tasa DGT 4.4',
+    canonicalType: DOCUMENT_TYPES.JUSTIFICANTE_PAGO,
+    family: 'dgt_generica',
+    issuerHints: ['direccion general de trafico', 'ministerio del interior', 'dgt'],
+    keywordHints: ['tasa 4.4'],
+    strongSignals: ['numero de tasa', 'nrc', 'jefatura de trafico'],
+    regexSignals: [/tasa\s*4[\.,]?4/i],
+    tramites: ['duplicado'],
+  },
+  {
+    type: DOCUMENT_TYPES.CONTRATO_FACTURA,
+    label: 'Contrato de compraventa / factura de transmisión',
+    canonicalType: DOCUMENT_TYPES.CONTRATO_FACTURA,
+    family: 'transferencia',
+    issuerHints: [],
+    keywordHints: ['contrato de compraventa', 'compraventa', 'vendedor', 'comprador'],
+    strongSignals: ['precio', 'matricula', 'vehiculo', 'firma'],
+    regexSignals: [/contrato\s+de\s+compraventa/i, /comprador/i, /vendedor/i],
+    tramites: ['transferencia', 'notificacion_venta', 'aceptacion_venta'],
+  },
+  {
+    type: DOCUMENT_TYPES.PERMISO_CIRCULACION,
+    label: 'Permiso de circulación',
+    canonicalType: DOCUMENT_TYPES.PERMISO_CIRCULACION,
+    family: 'vehiculo',
+    issuerHints: ['direccion general de trafico', 'ministerio del interior'],
+    keywordHints: ['permiso de circulacion', 'permiso circulacion'],
+    strongSignals: ['matricula', 'bastidor', 'titular', 'fecha matriculacion'],
+    regexSignals: [/permiso\s+de\s+circulaci[oó]n/i],
+    tramites: ['transferencia', 'duplicado', 'baja_temporal'],
+  },
+  {
+    type: DOCUMENT_TYPES.FICHA_TECNICA,
+    label: 'Ficha técnica / tarjeta ITV',
+    canonicalType: DOCUMENT_TYPES.FICHA_TECNICA,
+    family: 'vehiculo',
+    issuerHints: ['itv', 'inspeccion tecnica de vehiculos'],
+    keywordHints: ['ficha tecnica', 'tarjeta itv', 'inspeccion tecnica'],
+    strongSignals: ['matricula', 'bastidor', 'marca', 'modelo', 'servicio'],
+    regexSignals: [/ficha\s+t[eé]cnica/i, /tarjeta\s+itv/i],
+    tramites: ['transferencia', 'matriculacion', 'duplicado'],
+  },
+  {
+    type: DOCUMENT_TYPES.DNI_COMPRADOR,
+    label: 'DNI comprador',
+    canonicalType: DOCUMENT_TYPES.DNI,
+    family: 'identidad',
+    issuerHints: ['documento nacional de identidad'],
+    keywordHints: ['dni comprador', 'comprador', 'documento nacional de identidad'],
+    strongSignals: ['nombre', 'apellido', 'dni'],
+    regexSignals: [/documento\s+nacional\s+de\s+identidad/i],
+    tramites: ['transferencia', 'aceptacion_venta'],
+  },
+  {
+    type: DOCUMENT_TYPES.DNI_VENDEDOR,
+    label: 'DNI vendedor',
+    canonicalType: DOCUMENT_TYPES.DNI,
+    family: 'identidad',
+    issuerHints: ['documento nacional de identidad'],
+    keywordHints: ['dni vendedor', 'vendedor', 'documento nacional de identidad'],
+    strongSignals: ['nombre', 'apellido', 'dni'],
+    regexSignals: [/documento\s+nacional\s+de\s+identidad/i],
+    tramites: ['transferencia', 'notificacion_venta'],
+  },
+]
+
+const BY_TYPE = Object.fromEntries(TRANSFERENCIA_DOCUMENT_CATALOG.map((item) => [item.type, item]))
+
+export function getDocumentCatalogEntry(type) {
+  return BY_TYPE[type] || null
+}
+
+export function resolveCanonicalDocumentType(type) {
+  return DOCUMENT_CANONICAL_TYPES[type] || type
+}
+
+export function getCompatibleDocumentTypes(type) {
+  const canonical = resolveCanonicalDocumentType(type)
+  return [...new Set([type, canonical, ...Object.entries(DOCUMENT_CANONICAL_TYPES)
+    .filter(([, target]) => target === canonical)
+    .map(([source]) => source)])]
+}
