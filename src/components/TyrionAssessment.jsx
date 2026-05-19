@@ -12,7 +12,7 @@ const STATE_LABELS = {
   ready_for_output: 'Listo para salida',
 }
 
-export function TyrionAssessment({ assessment }) {
+export function TyrionAssessment({ assessment, compact = false }) {
   if (!assessment) return null
 
   const {
@@ -46,7 +46,7 @@ export function TyrionAssessment({ assessment }) {
       </div>
 
       <div className="tyrion-next-step">
-        <b>Siguiente paso sugerido:</b> {decision.actionHint}
+        <b>Siguiente paso:</b> {decision.actionHint}
       </div>
 
       {uiConflicts?.items?.length > 0 && (
@@ -58,9 +58,9 @@ export function TyrionAssessment({ assessment }) {
 
       {uiConflicts?.items?.length > 0 && (
         <div className="low tyrion-low-confidence">
-          <b>Conflictos operativos detectados:</b>
+          <b>Conflictos detectados:</b>
           <ul>
-            {uiConflicts.items.map((item) => (
+            {uiConflicts.items.slice(0, compact ? 3 : uiConflicts.items.length).map((item) => (
               <li key={item.code}>
                 <b>{item.title}</b> · {item.severityLabel}<br />
                 <small>{item.summary}</small><br />
@@ -71,74 +71,78 @@ export function TyrionAssessment({ assessment }) {
         </div>
       )}
 
-      <div className="tyrion-grid">
-        <div>
-          <h4>
-            <CheckCircle2 size={16} /> Validaciones automáticas
-          </h4>
-          <ul>
-            {automaticValidations.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-          {automaticValidationResults?.length > 0 && (
-            <ul>
-              {automaticValidationResults.map((item) => (
-                <li key={item.code}>
-                  <b>{item.label}:</b> {item.status === 'passed' ? 'ok' : 'revisar'} · {item.detail}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      {compact ? null : (
+        <>
+          <div className="tyrion-grid">
+            <div>
+              <h4>
+                <CheckCircle2 size={16} /> Validaciones automáticas
+              </h4>
+              <ul>
+                {automaticValidations.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              {automaticValidationResults?.length > 0 && (
+                <ul>
+                  {automaticValidationResults.map((item) => (
+                    <li key={item.code}>
+                      <b>{item.label}:</b> {item.status === 'passed' ? 'ok' : 'revisar'} · {item.detail}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-        <div>
-          <h4>
-            <AlertTriangle size={16} /> Faltantes obligatorios
-          </h4>
-          {actionableMissingDocuments.length ? (
-            <ul>
-              {actionableMissingDocuments.map((item) => (
-                <li key={item.type}>
-                  {item.label} <small>→ pedir a: {item.requestedFrom}</small>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>Sin faltantes obligatorios.</p>
-          )}
-        </div>
+            <div>
+              <h4>
+                <AlertTriangle size={16} /> Faltantes obligatorios
+              </h4>
+              {actionableMissingDocuments.length ? (
+                <ul>
+                  {actionableMissingDocuments.map((item) => (
+                    <li key={item.type}>
+                      {item.label} <small>→ pedir a: {item.requestedFrom}</small>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Sin faltantes obligatorios.</p>
+              )}
+            </div>
 
-        <div>
-          <h4>
-            <ShieldAlert size={16} /> Escalado humano
-          </h4>
-          {actionableEscalations.length > 0 ? (
-            <ul>
-              {actionableEscalations.map((item) => (
-                <li key={item.reason}>
-                  {item.label} <small>→ revisar: {item.owner}</small>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>Sin escalados humanos activos.</p>
-          )}
-        </div>
-      </div>
+            <div>
+              <h4>
+                <ShieldAlert size={16} /> Escalado humano
+              </h4>
+              {actionableEscalations.length > 0 ? (
+                <ul>
+                  {actionableEscalations.map((item) => (
+                    <li key={item.reason}>
+                      {item.label} <small>→ revisar: {item.owner}</small>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Sin escalados humanos activos.</p>
+              )}
+            </div>
+          </div>
 
-      {lowConfidenceDocuments.length > 0 && (
-        <div className="low tyrion-low-confidence">
-          <b>Documentos con baja confianza:</b>
-          <ul>
-            {lowConfidenceDocuments.map((document) => (
-              <li key={document.id}>
-                {document.file_name} · {document.document_type} · conf. {document.confidence}
-                {document.ai_payload?.extracted_fields?.plates?.length ? ` · mat.: ${document.ai_payload.extracted_fields.plates.join(', ')}` : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
+          {lowConfidenceDocuments.length > 0 && (
+            <div className="low tyrion-low-confidence">
+              <b>Documentos con baja confianza:</b>
+              <ul>
+                {lowConfidenceDocuments.map((document) => (
+                  <li key={document.id}>
+                    {document.file_name} · {document.document_type} · conf. {document.confidence}
+                    {document.ai_payload?.extracted_fields?.plates?.length ? ` · mat.: ${document.ai_payload.extracted_fields.plates.join(', ')}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </section>
   )
