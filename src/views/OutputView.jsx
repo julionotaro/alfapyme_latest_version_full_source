@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Download, PlayCircle, RotateCcw } from 'lucide-react'
+import { CopilotView } from './CopilotView'
 import {
   downloadBatchCsv,
   fetchOutputBatches,
@@ -58,9 +59,15 @@ export function OutputView() {
       {message && <div className="msg">{message}</div>}
 
       <div className="tabs">
-        {['queue', 'batches', 'sessions', 'jobs', 'strategies'].map((item) => (
-          <button key={item} className={tab === item ? 'on' : ''} onClick={() => setTab(item)}>
-            {item}
+        {[
+          ['queue', 'Cola'],
+          ['batches', 'CSV'],
+          ['copilot', 'Copilot'],
+          ['jobs', 'Mensajes'],
+          ['strategies', 'Integraciones'],
+        ].map(([id, label]) => (
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+            {label}
           </button>
         ))}
       </div>
@@ -105,19 +112,15 @@ export function OutputView() {
         </section>
       )}
 
-      {tab === 'sessions' && (
-        <List
-          title="Sesiones Copilot"
-          rows={sessions}
-          cols={['session_name', 'case_type', 'total_cases', 'status', 'output_route']}
-        />
+      {tab === 'copilot' && (
+        sessions.length ? <CopilotView /> : <p>Sin sesiones Copilot disponibles.</p>
       )}
 
-      {tab === 'jobs' && <JobsPanel rows={jobs} reload={load} />}
+      {tab === 'jobs' && <JobsPanel rows={jobs.filter((job) => ['message_body', 'attachment_package'].includes(job.output_mode))} reload={load} />}
 
       {tab === 'strategies' && (
         <List
-          title="Estrategias"
+          title="Integraciones y estrategias"
           rows={strategies}
           cols={['case_type', 'output_route', 'output_mode', 'grouping_strategy', 'destination_system']}
         />
@@ -146,7 +149,7 @@ function JobsPanel({ rows, reload }) {
 
   return (
     <section className="card">
-      <h3>Jobs / Retry logic</h3>
+      <h3>Mensajes y adjuntos pendientes</h3>
       <button onClick={retry}>
         <RotateCcw size={14} /> Reintentar fallidos
       </button>

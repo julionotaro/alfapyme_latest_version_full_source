@@ -4,7 +4,7 @@ export function Sidebar({ view, onChange }) {
   return (
     <aside>
       <h1>Alfa‑Pyme</h1>
-      <p>Supervisor de flujo — v0.6.2</p>
+      <p>Ops Cockpit — v0.7.0</p>
 
       {VIEWS.map(({ id, label }) => (
         <button

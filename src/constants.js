@@ -14,18 +14,22 @@ export const CASE_STATUS_LABELS = {
 }
 
 export const VIEWS = [
-  { id: 'workspace', label: 'Supervisión' },
-  { id: 'upload', label: 'Ingreso' },
+  { id: 'home', label: 'Inicio' },
+  { id: 'workspace', label: 'Bandeja operativa' },
+  { id: 'upload', label: 'Documentos / Entrada' },
+  { id: 'validation', label: 'Validación IA' },
   { id: 'output', label: 'Salidas' },
-  { id: 'copilot', label: 'Copilot' },
   { id: 'history', label: 'Historial' },
+  { id: 'settings', label: 'Configuración' },
 ]
 
 export const VIEW_TITLES = {
-  workspace: 'Supervisión operativa',
-  upload: 'Ingreso documental',
+  home: 'Inicio',
+  workspace: 'Bandeja operativa',
+  upload: 'Documentos / Entrada',
+  validation: 'Validación IA',
   viewer: 'Visor documental',
-  output: 'Mesa de salidas',
-  copilot: 'Copilot de ejecución',
+  output: 'Salidas',
   history: 'Historial y auditoría',
+  settings: 'Configuración',
 }

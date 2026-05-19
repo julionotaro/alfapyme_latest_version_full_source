@@ -16,16 +16,18 @@ import { getBusinessTemplate } from './domain/templates/index.js'
 import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
 import { FlashMessage } from './components/FlashMessage'
+import { HomeView } from './views/HomeView'
 import { WorkspaceView } from './views/WorkspaceView'
 import { UploadView } from './views/UploadView'
+import { ValidationView } from './views/ValidationView'
 import { ViewerView } from './views/ViewerView'
 import { OutputView } from './views/OutputView'
-import { CopilotView } from './views/CopilotView'
 import { HistoryView } from './views/HistoryView'
+import { SettingsView } from './views/SettingsView'
 import './style.css'
 
 export default function App() {
-  const [view, setView] = useState('workspace')
+  const [view, setView] = useState('home')
   const [cases, setCases] = useState([])
   const [selected, setSelected] = useState(null)
   const [documents, setDocuments] = useState([])
@@ -193,6 +195,17 @@ export default function App() {
         <Topbar view={view} onRefresh={loadCasesList} />
         <FlashMessage message={message} onClose={() => setMessage('')} />
 
+        {view === 'home' && (
+          <HomeView
+            cases={cases}
+            onSelectCase={(item) => {
+              setSelected(item)
+              setView('workspace')
+            }}
+            onGoToTray={() => setView('workspace')}
+          />
+        )}
+
         {view === 'workspace' && (
           <WorkspaceView
             cases={cases}
@@ -224,6 +237,16 @@ export default function App() {
           />
         )}
 
+        {view === 'validation' && (
+          <ValidationView
+            cases={cases}
+            selected={selected}
+            onSelectCase={setSelected}
+            onOpenTray={() => setView('workspace')}
+            onOpenDocuments={() => setView('viewer')}
+          />
+        )}
+
         {view === 'viewer' && (
           <ViewerView
             selected={selected}
@@ -236,8 +259,8 @@ export default function App() {
         )}
 
         {view === 'output' && <OutputView />}
-        {view === 'copilot' && <CopilotView />}
         {view === 'history' && <HistoryView selected={selected} />}
+        {view === 'settings' && <SettingsView />}
       </main>
     </div>
   )
