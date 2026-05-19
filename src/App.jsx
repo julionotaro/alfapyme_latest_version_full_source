@@ -242,8 +242,13 @@ export default function App() {
             cases={cases}
             selected={selected}
             onSelectCase={setSelected}
+            documents={documents}
+            activeDoc={activeDoc}
+            setActiveDoc={setActiveDoc}
+            docUrl={docUrl}
+            checklist={checklist}
+            tyrionAssessment={tyrionAssessment}
             onOpenTray={() => setView('workspace')}
-            onOpenDocuments={() => setView('viewer')}
           />
         )}
 

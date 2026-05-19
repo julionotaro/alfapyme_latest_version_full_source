@@ -1,60 +1,144 @@
-import { AlertTriangle, Eye } from 'lucide-react'
-import { CASE_STATUS_LABELS } from '../constants'
+import { Eye } from 'lucide-react'
 
-const VALIDATION_STATUSES = ['human_validation', 'waiting_human', 'blocked', 'failed', 'pending_client']
-
-export function ValidationView({ cases = [], selected, onSelectCase, onOpenTray, onOpenDocuments }) {
-  const rows = cases.filter((item) => VALIDATION_STATUSES.includes(item.status))
+export function ValidationView({
+  cases = [],
+  selected,
+  onSelectCase,
+  documents = [],
+  activeDoc,
+  setActiveDoc,
+  docUrl,
+  checklist = [],
+  tyrionAssessment,
+  onOpenTray,
+}) {
+  const reviewRows = cases.filter((item) => ['human_validation', 'waiting_human', 'blocked', 'failed', 'pending_client', 'triaged'].includes(item.status))
 
   return (
-    <section className="card validation-view">
-      <div className="section-head">
-        <div>
-          <h3>Cola de validación IA</h3>
-          <p>Aquí viven los casos que la IA no debería cerrar sola.</p>
+    <div className="validation-reference-layout">
+      <section className="surface-card validation-list-panel">
+        <div className="section-head compact-head">
+          <div>
+            <h3>Origen · documentos</h3>
+            <p>Selecciona el expediente que quieras revisar.</p>
+          </div>
         </div>
-        <span className="status-pill warning">{rows.length} caso(s) con revisión</span>
-      </div>
 
-      {rows.length ? rows.map((item) => (
-        <div key={item.id} className={`validation-row ${selected?.id === item.id ? 'sel' : ''}`}>
+        <div className="review-case-list">
+          {reviewRows.length ? reviewRows.map((item) => (
+            <button key={item.id} className={`review-case-item ${selected?.id === item.id ? 'on' : ''}`} onClick={() => onSelectCase(item)}>
+              <b>{item.public_id}</b>
+              <small>{item.client_name || 'Sin cliente'}</small>
+              <span>{humanize(item.case_type)}</span>
+            </button>
+          )) : <p className="muted-line">No hay expedientes pendientes de validación.</p>}
+        </div>
+      </section>
+
+      <section className="surface-card document-stage-panel">
+        <div className="split-toolbar">
           <div>
-            <b>{item.public_id}</b>
-            <small>{item.client_name || 'Sin cliente'} · {humanizeCaseType(item.case_type)}</small>
+            <span className="page-kicker">Área de trabajo</span>
+            <h3>{selected?.public_id || 'Validación split-view'}</h3>
           </div>
-          <div>
-            <span className={`status-pill ${resolveTone(item.status)}`}>{CASE_STATUS_LABELS[item.status] || item.status}</span>
+          <button onClick={onOpenTray}><Eye size={14} /> Abrir bandeja</button>
+        </div>
+
+        <div className="document-split-shell">
+          <div className="doc-strip">
+            {documents.length ? documents.map((document, index) => (
+              <button key={document.id} className={`doc-thumb ${activeDoc?.id === document.id ? 'on' : ''}`} onClick={() => setActiveDoc(document)}>
+                <span>{index + 1}</span>
+                <small>{humanize(document.document_type)}</small>
+              </button>
+            )) : <div className="empty-preview">Sin documentos</div>}
           </div>
-          <div>
-            <small>{explainStatus(item.status)}</small>
-          </div>
-          <div className="validation-actions">
-            <button onClick={() => onSelectCase(item)}><Eye size={14} /> Seleccionar</button>
-            <button onClick={() => { onSelectCase(item); onOpenTray() }}>Abrir bandeja</button>
-            <button onClick={() => { onSelectCase(item); onOpenDocuments() }}>Ver documentos</button>
+
+          <div className="doc-canvas">
+            {docUrl ? (
+              activeDoc?.file_type?.startsWith('image/') ? (
+                <img src={docUrl} alt={activeDoc?.file_name || 'Documento'} />
+              ) : (
+                <iframe src={docUrl} title={activeDoc?.file_name || 'Documento'} />
+              )
+            ) : (
+              <div className="empty-preview">Selecciona un documento para revisar la lectura.</div>
+            )}
           </div>
         </div>
-      )) : (
-        <div className="empty-state">
-          <AlertTriangle size={18} />
-          <p>No hay conflictos abiertos ahora mismo. Milagro estadístico o buen trabajo.</p>
+      </section>
+
+      <section className="surface-card extraction-panel">
+        <div className="section-head compact-head">
+          <div>
+            <h3>Resultado · datos extraídos</h3>
+            <p>Mostramos la lectura útil, no todo el barro interno.</p>
+          </div>
         </div>
-      )}
-    </section>
+
+        <div className="extraction-fields">
+          <ExtractionField label="Trámite inferido" value={tyrionAssessment?.requirement?.label || humanize(selected?.case_type) || 'Sin inferencia aún'} confidence={confidenceBadge(activeDoc?.confidence)} />
+          <ExtractionField label="Documento activo" value={activeDoc?.file_name || 'Sin documento seleccionado'} confidence={confidenceBadge(activeDoc?.confidence)} />
+          <ExtractionField label="Tipo detectado" value={humanize(activeDoc?.document_type) || 'Sin detectar'} confidence={confidenceBadge(activeDoc?.confidence)} />
+          <ExtractionField label="Matrícula" value={selected?.vehicle_plate || getExtractedPlate(activeDoc) || 'No detectada todavía'} confidence={selected?.vehicle_plate || getExtractedPlate(activeDoc) ? 'ok' : 'revisar'} />
+          <ExtractionField label="Checklist corto" value={checklistSummary(checklist)} confidence={checklist.some((item) => item.is_blocking && item.status === 'missing') ? 'revisar' : 'ok'} />
+          <ExtractionField label="Acción siguiente" value={actionLabel(selected, tyrionAssessment, checklist)} confidence="ok" />
+        </div>
+
+        <div className="split-actions">
+          <button>Guardar cambios</button>
+          <button className="primary" onClick={onOpenTray}>Volver a bandeja</button>
+        </div>
+      </section>
+    </div>
   )
 }
 
-function humanizeCaseType(value) {
-  return String(value || 'sin clasificar').replace(/_/g, ' ')
+function ExtractionField({ label, value, confidence }) {
+  return (
+    <div className="extract-field">
+      <span>{label}</span>
+      <div>
+        <b>{value}</b>
+        <em className={`confidence-badge ${confidence}`}>{confidenceLabel(confidence)}</em>
+      </div>
+    </div>
+  )
 }
 
-function resolveTone(status) {
-  if (['blocked', 'failed'].includes(status)) return 'danger'
-  return 'warning'
+function humanize(value) {
+  return String(value || '').replace(/_/g, ' ')
 }
 
-function explainStatus(status) {
-  if (['blocked', 'failed'].includes(status)) return 'Conflicto crítico o fallo de flujo.'
-  if (status === 'pending_client') return 'Faltan documentos o respuesta del cliente.'
-  return 'Revisión humana antes de avanzar.'
+function getExtractedPlate(doc) {
+  return doc?.ai_payload?.extracted_fields?.plates?.[0] || ''
+}
+
+function checklistSummary(checklist = []) {
+  if (!checklist.length) return 'Sin checklist proyectado'
+  const missing = checklist.filter((item) => item.status === 'missing').length
+  const validated = checklist.filter((item) => item.validation_status === 'validated').length
+  return `${validated} validado(s) · ${missing} faltante(s)`
+}
+
+function actionLabel(selected, assessment, checklist = []) {
+  const missingBlocking = checklist.filter((item) => item.is_blocking && item.status === 'missing').length
+  if (missingBlocking > 0) return 'Pedir o validar faltantes bloqueantes'
+  if (assessment?.lowConfidenceDocuments?.length) return 'Revisar lectura dudosa'
+  if (selected?.status === 'ready_for_output') return 'Ejecutar salida'
+  return 'Confirmar lectura del expediente'
+}
+
+function confidenceBadge(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return 'medio'
+  if (n >= 0.9) return 'ok'
+  if (n >= 0.75) return 'medio'
+  return 'revisar'
+}
+
+function confidenceLabel(value) {
+  if (value === 'ok') return 'alta'
+  if (value === 'revisar') return 'revisar'
+  return 'media'
 }
