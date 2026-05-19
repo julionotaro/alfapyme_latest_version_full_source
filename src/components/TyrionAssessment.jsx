@@ -50,6 +50,13 @@ export function TyrionAssessment({ assessment }) {
       </div>
 
       {uiConflicts?.items?.length > 0 && (
+        <div className="tyrion-conflict-summary">
+          <span><b>{uiConflicts.blockedCount}</b> bloqueante(s)</span>
+          <span><b>{uiConflicts.reviewCount}</b> revisable(s)</span>
+        </div>
+      )}
+
+      {uiConflicts?.items?.length > 0 && (
         <div className="low tyrion-low-confidence">
           <b>Conflictos operativos detectados:</b>
           <ul>

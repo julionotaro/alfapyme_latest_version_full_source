@@ -4,7 +4,7 @@ export function Sidebar({ view, onChange }) {
   return (
     <aside>
       <h1>Alfa‑Pyme</h1>
-      <p>Ops Cockpit MVP — v0.6.2</p>
+      <p>Supervisor de flujo — v0.6.2</p>
 
       {VIEWS.map(({ id, label }) => (
         <button
@@ -15,6 +15,10 @@ export function Sidebar({ view, onChange }) {
           {label}
         </button>
       ))}
+
+      <div className="sidebar-footer">
+        <small>Prioridad: bloqueos → revisión → salida.</small>
+      </div>
     </aside>
   )
 }
