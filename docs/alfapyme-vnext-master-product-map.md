@@ -89,29 +89,27 @@ La navegación debe expresar una plataforma de producto, no un laboratorio.
 ## 3.1 Navegación principal propuesta
 1. **Inicio**
 2. **Bandeja operativa**
-3. **Documentos**
+3. **Documentos / Entrada**
 4. **Validación IA**
 5. **Salidas**
-6. **Copilot**
-7. **Historial**
-8. **Analytics**
-9. **Configuración**
+6. **Historial**
+7. **Configuración**
 
 ## 3.2 Racional de esta estructura
 - **Inicio**: visión global del sistema
 - **Bandeja operativa**: gestión viva de expedientes
-- **Documentos**: exploración documental y entrada
+- **Documentos / Entrada**: exploración documental y entrada
 - **Validación IA**: supervisión de conflictos, incoherencias y baja confianza
-- **Salidas**: preparación y control de outputs
-- **Copilot**: ejecución humana asistida de ciertos outputs
+- **Salidas**: preparación y control de outputs, incluyendo modo Copilot dentro de la misma sección
 - **Historial**: trazabilidad y auditoría
-- **Analytics**: métricas de volumen, atascos, tiempos, ratios
 - **Configuración**: templates, canales, integraciones, automatizaciones
 
 ## 3.3 Qué desaparece conceptualmente
 Deben desaparecer como eje de navegación principal las pantallas pensadas desde el código y no desde el trabajo, como:
 - “workspace” como concepto ambiguo
 - “viewer” como vista principal
+- “Copilot” como isla separada del flujo de salidas
+- “Analytics” antes de que exista un caso de uso cerrado
 - pantallas que obligan a pensar en módulos internos en vez de flujo
 
 ---
@@ -218,6 +216,20 @@ Sin salir de la pantalla, mostrar:
 ## 5.4 Regla visual crítica
 La bandeja no debe volverse una sábana.
 No debe exigir scroll absurdo para ver un solo caso.
+
+## 5.5 Estado funcional ya aterrizado en la iteración actual
+La Bandeja operativa ya debe expresar explícitamente estas tres preguntas:
+- qué entendió la IA del expediente
+- qué falta para poder moverlo
+- qué acción concreta toca ahora
+
+Para ello, la implementación actual de referencia debe incluir:
+- lista lateral priorizada de expedientes vivos
+- mini KPIs operativos dentro de la propia bandeja
+- panel central con trámite inferido, confianza, datos clave y siguiente paso
+- resumen corto de conflictos y faltantes sin obligar al usuario a abrir otra vista
+
+Esta pantalla no debe limitarse a enseñar estados técnicos. Debe hablar en lectura operativa.
 
 Debe priorizar:
 1. lista compacta

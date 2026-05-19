@@ -17,30 +17,52 @@ export function WorkspaceView({
   tyrionAssessment,
   tyrionTransition,
 }) {
+  const activeCases = cases.filter((item) => !['completed'].includes(item.status))
+  const focusCases = activeCases
+    .slice()
+    .sort((a, b) => trayPriority(a) - trayPriority(b) || String(a.public_id).localeCompare(String(b.public_id)))
+
   return (
     <div className="workspace-v2">
       <section className="card tray-panel">
-        <div className="tray-head">
-          <h3>Expedientes</h3>
-          <small>{cases.length} activo(s)</small>
+        <div className="tray-head tray-head-strong">
+          <div>
+            <span className="eyebrow">Mesa operativa</span>
+            <h3>Expedientes vivos</h3>
+          </div>
+          <small>{focusCases.length} activo(s)</small>
         </div>
-        <div className="case-list">
-          {cases.map((currentCase) => {
+
+        <div className="tray-mini-kpis">
+          <TrayStat label="Por revisar" value={focusCases.filter((item) => ['triaged', 'human_validation', 'waiting_human'].includes(item.status)).length} tone="warning" />
+          <TrayStat label="Bloqueados" value={focusCases.filter((item) => ['blocked', 'failed', 'pending_client'].includes(item.status)).length} tone="danger" />
+          <TrayStat label="Listos" value={focusCases.filter((item) => ['ready_for_output'].includes(item.status)).length} tone="success" />
+        </div>
+
+        <div className="case-list case-table-list">
+          <div className="case-table-head">
+            <span>Expediente</span>
+            <span>Trámite</span>
+            <span>Estado</span>
+          </div>
+
+          {focusCases.map((currentCase) => {
             const selectedRow = selected?.id === currentCase.id
             const tone = resolveCaseTone(currentCase.status)
 
             return (
               <button key={currentCase.id} className={`case-row ${selectedRow ? 'sel' : ''}`} onClick={() => setSelected(currentCase)}>
-                <div>
+                <div className="case-row-topline">
                   <b>{currentCase.public_id}</b>
-                  <small>{currentCase.client_name}</small>
+                  <small>{currentCase.client_name || 'Sin cliente'}</small>
                 </div>
-                <div>
+                <div className="case-row-middle">
                   <b>{humanizeCaseType(currentCase.case_type)}</b>
                   <small>{currentCase.vehicle_plate || 'Matrícula pendiente'}</small>
                 </div>
-                <div>
+                <div className="case-row-bottom">
                   <span className={`status-pill ${tone}`}>{CASE_STATUS_LABELS[currentCase.status] || currentCase.status}</span>
+                  <small>{getRowAction(currentCase)}</small>
                 </div>
               </button>
             )
@@ -78,6 +100,21 @@ export function WorkspaceView({
                   <span>Datos clave</span>
                   <b>{getDetectedKeyDataLabel(selected, documents)}</b>
                 </div>
+              </div>
+            </div>
+
+            <div className="ops-detail-band">
+              <div className="ops-band-item">
+                <span>Estado operativo</span>
+                <b>{humanReadableStatus(selected.status, tyrionAssessment)}</b>
+              </div>
+              <div className="ops-band-item">
+                <span>Conflictos</span>
+                <b>{tyrionAssessment?.uiConflicts?.blockedCount || 0} bloqueantes · {tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables</b>
+              </div>
+              <div className="ops-band-item">
+                <span>Siguiente paso</span>
+                <b>{getPrimaryActionTitle(selected, tyrionAssessment, missingBlocking)}</b>
               </div>
             </div>
 
@@ -172,6 +209,15 @@ export function WorkspaceView({
   )
 }
 
+function TrayStat({ label, value, tone }) {
+  return (
+    <div className={`tray-stat ${tone}`}>
+      <span>{label}</span>
+      <b>{value}</b>
+    </div>
+  )
+}
+
 function humanizeCaseType(value) {
   return String(value || 'sin clasificar').replace(/_/g, ' ')
 }
@@ -185,6 +231,21 @@ function resolveCaseTone(status) {
   if (['human_validation', 'waiting_human', 'pending_client', 'waiting_input', 'triaged'].includes(status)) return 'warning'
   if (['ready_for_output', 'completed'].includes(status)) return 'success'
   return 'neutral'
+}
+
+function trayPriority(item) {
+  if (['blocked', 'failed'].includes(item.status)) return 0
+  if (['pending_client', 'human_validation', 'waiting_human', 'triaged'].includes(item.status)) return 1
+  if (['ready_for_output'].includes(item.status)) return 2
+  return 3
+}
+
+function getRowAction(item) {
+  if (['blocked', 'failed'].includes(item.status)) return 'Destrabar caso'
+  if (['pending_client'].includes(item.status)) return 'Pedir faltante'
+  if (['human_validation', 'waiting_human', 'triaged'].includes(item.status)) return 'Revisar lectura'
+  if (item.status === 'ready_for_output') return 'Pasar a salida'
+  return 'Abrir detalle'
 }
 
 function humanReadableStatus(status, assessment) {

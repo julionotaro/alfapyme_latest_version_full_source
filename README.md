@@ -1,6 +1,6 @@
-# Alfa-Pyme Ops Cockpit MVP — v0.6.2
+# Alfa-Pyme Ops Cockpit MVP — v0.8.1
 
-> **Versión de trabajo actual: v0.6.2 · rama principal sincronizada para GitHub/Vercel**
+> **Versión de trabajo actual: v0.8.1 · rama principal sincronizada para GitHub/Vercel**
 
 MVP operacional para gestorías orientado a expedientes documentales, validación humana y preparación de salidas hacia distintos canales.
 
@@ -13,11 +13,19 @@ MVP operacional para gestorías orientado a expedientes documentales, validació
 ## Objetivo del MVP
 Validar un cockpit operativo donde un expediente pase por:
 1. recepción documental
-2. checklist y validación
-3. visor documental
+2. inferencia automática de trámite
+3. validación humana con corrección editable
 4. preparación de salida
 5. historial operativo
-6. sesiones tipo copilot
+
+## Navegación actual del cockpit
+- Inicio
+- Bandeja operativa
+- Documentos / Entrada
+- Validación IA
+- Salidas
+- Historial
+- Configuración
 
 ## Estructura actual
 ```text
@@ -88,16 +96,18 @@ Guía detallada:
 La base frontend compila y expresa bien el flujo del negocio, pero todavía está en fase MVP.
 
 ### Último frente trabajado incluido en esta versión
-- validación de ingesta documental (`ingestion:validate`)
-- validación de contratos de salida (`outputs:validate`)
-- endurecimiento de la capa de outputs y payloads
-- fixtures realistas y utilidades de prueba para lote documental
-- estructura preparada para gran prueba real con PDF e imágenes desde Vercel
+- rediseño base del cockpit siguiendo estructura visual de referencia
+- inferencia de `case_type` a partir del conjunto documental cargado
+- persistencia de matrícula inferida cuando el expediente aún no la tiene
+- Validación IA editable con guardado de correcciones humanas
+- Bandeja operativa reforzada para mostrar qué entendió la IA, qué falta y qué hacer ahora
+- limpieza de datos operativos demo sin tocar estrategia/configuración
 
 ### Límites actuales
 - hay simulación en partes de clasificación/OCR/confianza
 - faltan integraciones reales del execution engine
 - las policies SQL incluidas siguen siendo demasiado abiertas para producción
+- la Bandeja operativa ya es más útil, pero aún admite una segunda pasada visual para quedar calcada al patrón objetivo
 - el cockpit y los lotes están pensados para validación operativa, no todavía para operación final endurecida
 
 ## Prioridades recomendadas
