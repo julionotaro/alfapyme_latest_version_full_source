@@ -1,6 +1,8 @@
 import { getHumanReviewLabel, getHumanReviewOwner } from './human-review-rules.js'
 import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from './document-types.js'
 import { getTramiteRequirement, TYRION_CASE_STATES } from './tramite-requirements.js'
+import { evaluateTransferCrossChecks, TRANSFER_CASE_SUBTYPES } from './transfer-case-rules.js'
+import { buildUiConflictSummary } from './ui-conflicts.js'
 
 function buildDocumentTypeSet(documents = []) {
   return new Set(documents.map((document) => document.document_type).filter(Boolean))
@@ -21,6 +23,13 @@ function normalizeText(value) {
 }
 
 function evaluateCrossDocumentValidations({ caseData, documents = [] }) {
+  if (caseData?.case_type === 'transferencia') {
+    const transferEvaluation = evaluateTransferCrossChecks(documents)
+    if (transferEvaluation.subtype !== TRANSFER_CASE_SUBTYPES.INDETERMINADO) {
+      return transferEvaluation.validations
+    }
+  }
+
   const validations = []
   const plates = getFlatValues(documents, (fields) => fields.plates || [])
   const vins = getFlatValues(documents, (fields) => (fields.vin ? [fields.vin] : []))
@@ -164,6 +173,7 @@ export function evaluateExpedient({ caseData, documents = [] }) {
   const lowConfidenceDocuments = documents.filter((document) => Number(document.confidence ?? 0) < 0.85)
   const crossValidations = evaluateCrossDocumentValidations({ caseData, documents })
   const failedCrossValidations = crossValidations.filter((validation) => validation.status === 'failed')
+  const uiConflicts = buildUiConflictSummary(failedCrossValidations)
 
   const escalations = []
   if (missingRequiredDocuments.length > 0) escalations.push('missing_required_documents')
@@ -196,6 +206,7 @@ export function evaluateExpedient({ caseData, documents = [] }) {
     automaticValidations: requirement.automaticValidations,
     automaticValidationResults: crossValidations,
     failedCrossValidations,
+    uiConflicts,
     mandatoryHumanEscalations: requirement.mandatoryHumanEscalations,
     actionableEscalations,
     escalations,

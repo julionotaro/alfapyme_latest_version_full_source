@@ -1,6 +1,6 @@
-# Alfa-Pyme Ops Cockpit MVP — v0.6.1
+# Alfa-Pyme Ops Cockpit MVP — v0.6.2
 
-> **Versión de trabajo actual: v0.6.1 · rama principal sincronizada para GitHub/Vercel**
+> **Versión de trabajo actual: v0.6.2 · rama principal sincronizada para GitHub/Vercel**
 
 MVP operacional para gestorías orientado a expedientes documentales, validación humana y preparación de salidas hacia distintos canales.
 

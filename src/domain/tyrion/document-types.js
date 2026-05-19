@@ -1,4 +1,6 @@
 export const DOCUMENT_TYPES = {
+  CTI_TRANSFERENCIA: 'cti_transferencia',
+  CTI_HERENCIA: 'cti_herencia',
   DNI_COMPRADOR: 'dni_comprador',
   DNI_VENDEDOR: 'dni_vendedor',
   DNI: 'dni',
@@ -11,6 +13,10 @@ export const DOCUMENT_TYPES = {
   TASA_DGT_1_5: 'tasa_dgt_1_5',
   TASA_DGT_4_1: 'tasa_dgt_4_1',
   TASA_DGT_4_4: 'tasa_dgt_4_4',
+  MODELO_650: 'modelo_650',
+  RELACION_BIENES_650: 'relacion_bienes_650',
+  SOLICITUD_CAMBIO_FALLECIMIENTO: 'solicitud_cambio_fallecimiento',
+  CERTIFICADO_DEFUNCION: 'certificado_defuncion',
   MANDATO_GESTORIA: 'mandato_gestoria',
   SOLICITUD_BAJA: 'solicitud_baja',
   SOLICITUD_DUPLICADO: 'solicitud_duplicado',
@@ -27,6 +33,8 @@ export const DOCUMENT_TYPES = {
 }
 
 export const DOCUMENT_TYPE_LABELS = {
+  [DOCUMENT_TYPES.CTI_TRANSFERENCIA]: 'CTI transferencia',
+  [DOCUMENT_TYPES.CTI_HERENCIA]: 'CTI herencia',
   [DOCUMENT_TYPES.DNI_COMPRADOR]: 'DNI comprador',
   [DOCUMENT_TYPES.DNI_VENDEDOR]: 'DNI vendedor',
   [DOCUMENT_TYPES.DNI]: 'DNI',
@@ -39,6 +47,10 @@ export const DOCUMENT_TYPE_LABELS = {
   [DOCUMENT_TYPES.TASA_DGT_1_5]: 'Tasa DGT 1.5',
   [DOCUMENT_TYPES.TASA_DGT_4_1]: 'Tasa DGT 4.1',
   [DOCUMENT_TYPES.TASA_DGT_4_4]: 'Tasa DGT 4.4',
+  [DOCUMENT_TYPES.MODELO_650]: 'Modelo 650',
+  [DOCUMENT_TYPES.RELACION_BIENES_650]: 'Relación de bienes 650',
+  [DOCUMENT_TYPES.SOLICITUD_CAMBIO_FALLECIMIENTO]: 'Solicitud cambio por fallecimiento',
+  [DOCUMENT_TYPES.CERTIFICADO_DEFUNCION]: 'Certificado de defunción',
   [DOCUMENT_TYPES.MANDATO_GESTORIA]: 'Mandato / autorización',
   [DOCUMENT_TYPES.SOLICITUD_BAJA]: 'Solicitud de baja',
   [DOCUMENT_TYPES.SOLICITUD_DUPLICADO]: 'Solicitud de duplicado',

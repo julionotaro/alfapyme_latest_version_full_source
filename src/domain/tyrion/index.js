@@ -21,6 +21,15 @@ export {
   getCompatibleDocumentTypes,
 } from './document-catalog.js'
 export { analyzeDocument, buildSimulatedOcrText } from './document-intelligence.js'
+export {
+  TRANSFER_CASE_SUBTYPES,
+  CANONICAL_TRANSFER_FIELDS,
+  NUCLEAR_DOCUMENT_RULES,
+  getNuclearDocumentRule,
+  inferTransferCaseSubtype,
+  evaluateTransferCrossChecks,
+} from './transfer-case-rules.js'
+export { buildUiConflictItem, buildUiConflictSummary } from './ui-conflicts.js'
 export { evaluateExpedient } from './validation-rules.js'
 export { projectChecklistFromRequirement } from './checklist-projection.js'
 export {

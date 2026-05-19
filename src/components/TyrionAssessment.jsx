@@ -23,6 +23,7 @@ export function TyrionAssessment({ assessment }) {
     automaticValidations,
     automaticValidationResults,
     failedCrossValidations,
+    uiConflicts,
     actionableEscalations,
   } = assessment
 
@@ -48,13 +49,15 @@ export function TyrionAssessment({ assessment }) {
         <b>Siguiente paso sugerido:</b> {decision.actionHint}
       </div>
 
-      {failedCrossValidations?.length > 0 && (
+      {uiConflicts?.items?.length > 0 && (
         <div className="low tyrion-low-confidence">
-          <b>Bloqueos operativos detectados:</b>
+          <b>Conflictos operativos detectados:</b>
           <ul>
-            {failedCrossValidations.map((item) => (
+            {uiConflicts.items.map((item) => (
               <li key={item.code}>
-                <b>{item.label}:</b> {item.detail}
+                <b>{item.title}</b> · {item.severityLabel}<br />
+                <small>{item.summary}</small><br />
+                <small>Acción sugerida: {item.recommendedAction}</small>
               </li>
             ))}
           </ul>

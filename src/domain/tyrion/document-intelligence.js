@@ -3,6 +3,16 @@ import { TRANSFERENCIA_DOCUMENT_CATALOG, getDocumentCatalogEntry, resolveCanonic
 
 const BASE_RULES = [
   {
+    type: DOCUMENT_TYPES.CTI_HERENCIA,
+    keywords: ['cti', 'cambio titularidad completo herencia', 'herencia'],
+    strongSignals: ['adquirente', 'transmitente', 'resultado cti', 'matricula'],
+  },
+  {
+    type: DOCUMENT_TYPES.CTI_TRANSFERENCIA,
+    keywords: ['cti', 'cambio titularidad completo'],
+    strongSignals: ['adquirente', 'transmitente', 'resultado cti', 'matricula'],
+  },
+  {
     type: DOCUMENT_TYPES.PERMISO_CIRCULACION,
     keywords: ['permiso circulacion', 'permiso de circulacion', 'circulation permit'],
     strongSignals: ['matricula', 'bastidor', 'titular'],
@@ -36,6 +46,26 @@ const BASE_RULES = [
     type: DOCUMENT_TYPES.DNI,
     keywords: ['dni', 'documento nacional identidad', 'nie', 'pasaporte'],
     strongSignals: ['dni', 'nombre'],
+  },
+  {
+    type: DOCUMENT_TYPES.MODELO_650,
+    keywords: ['modelo 650', 'sucesiones', 'donaciones'],
+    strongSignals: ['causante', 'heredero', 'masa hereditaria'],
+  },
+  {
+    type: DOCUMENT_TYPES.RELACION_BIENES_650,
+    keywords: ['relacion de bienes', 'anexo'],
+    strongSignals: ['causante', 'bienes', 'valor'],
+  },
+  {
+    type: DOCUMENT_TYPES.SOLICITUD_CAMBIO_FALLECIMIENTO,
+    keywords: ['cambio de titularidad de un vehiculo por fallecimiento', 'declaracion responsable'],
+    strongSignals: ['fallecimiento', 'solicitud', 'matricula'],
+  },
+  {
+    type: DOCUMENT_TYPES.CERTIFICADO_DEFUNCION,
+    keywords: ['certificacion literal de inscripcion de defuncion', 'registro civil'],
+    strongSignals: ['defuncion', 'fallecido', 'fecha de defuncion'],
   },
   {
     type: DOCUMENT_TYPES.MANDATO_GESTORIA,
@@ -109,6 +139,46 @@ function firstMatch(regex, text) {
 
 function unique(values = []) {
   return [...new Set(values.filter(Boolean))]
+}
+
+function cleanInlineValue(value = '') {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .replace(/[|]+/g, ' ')
+    .trim()
+}
+
+function normalizePersonName(value = '') {
+  const cleaned = cleanInlineValue(value)
+    .replace(/^(adquirente|transmitente|solicitante|heredero|causante|fallecido|fallecida|titular)\s*[:.-]?\s*/i, '')
+    .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, '')
+    .trim()
+
+  if (!cleaned) return null
+  return cleaned
+}
+
+function pickFirstMatch(text, patterns = []) {
+  for (const pattern of patterns) {
+    const value = firstMatch(pattern, text)
+    if (value) return cleanInlineValue(value)
+  }
+  return null
+}
+
+function extractRoleValue(text, labels = []) {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const patterns = escaped.flatMap((label) => [
+    new RegExp(`\\b(?:${label})\\b\\s*[:.-]\\s*([^\\n]{4,90})`, 'i'),
+    new RegExp(`\\b(?:${label})\\b\\s{2,}([^\\n]{4,90})`, 'i'),
+  ])
+  return normalizePersonName(pickFirstMatch(text, patterns))
+}
+
+function extractDateByLabel(text, labels = []) {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const patterns = escaped.map((label) => new RegExp(`(?:${label})[^\\d]{0,20}([0-3]?\\d[\\/.-][0-1]?\\d[\\/.-](?:20)?\\d{2})`, 'i'))
+  return pickFirstMatch(text, patterns)
 }
 
 const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE'
@@ -207,11 +277,16 @@ function extractFields(rawText) {
     firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim(),
     firstMatch(/(?:nombre):\s*([^\n]{4,})/i, text)?.trim(),
   ])
-  const buyerName = firstMatch(/(?:comprador|buyer):\s*([^\n]{4,})/i, text)?.trim() || null
-  const sellerName = firstMatch(/(?:vendedor|seller):\s*([^\n]{4,})/i, text)?.trim() || null
-  const ownerName = firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim() || null
+  const buyerName = extractRoleValue(text, ['comprador', 'buyer', 'adquirente'])
+  const sellerName = extractRoleValue(text, ['vendedor', 'seller', 'transmitente'])
+  const ownerName = extractRoleValue(text, ['titular'])
+  const heirName = extractRoleValue(text, ['heredero', 'adjudicatario', 'adjudicataria', 'solicitante', 'adquirente'])
+  const deceasedName = extractRoleValue(text, ['causante', 'fallecido', 'fallecida', 'transmitente'])
   const amount = firstMatch(/(?:importe|precio|total|valor declarado|importe a ingresar)[:\s€]*([0-9]+(?:[.,][0-9]{2})?)/i, text)
-  const date = firstMatch(/\b([0-3]?\d[\/.-][0-1]?\d[\/.-](?:20)?\d{2})\b/, text)
+  const date = extractDateByLabel(text, ['fecha presentacion', 'fecha de presentacion', 'fecha']) || firstMatch(/\b([0-3]?\d[\/.-][0-1]?\d[\/.-](?:20)?\d{2})\b/, text)
+  const deathDate = extractDateByLabel(text, ['fecha de defuncion', 'defuncion', 'fallecimiento'])
+  const signatureDate = extractDateByLabel(text, ['fecha de firma', 'firma', 'en pontevedra a'])
+  const registrationDate = extractDateByLabel(text, ['fecha matriculacion', 'fecha de matriculacion'])
   const address = firstMatch(/(?:domicilio|direccion|dirección)[:\s]+([^\n,]{5,})/i, text)?.trim() || null
   const vin = firstMatch(/\b([a-hj-npr-z0-9]{17})\b/i, normalized)?.toUpperCase() || null
   const issuer = extractIssuer(text, normalized)
@@ -220,6 +295,27 @@ function extractFields(rawText) {
     ...[...normalized.matchAll(/\btasa\s*([14])[\.,]?([145])\b/g)].map((match) => `tasa_${match[1]}_${match[2]}`),
   ])
 
+  const roleSpecificDnis = {
+    buyerId: null,
+    sellerId: null,
+    heirId: null,
+    deceasedId: null,
+  }
+
+  const buyerDni = pickFirstMatch(text, [/\b(?:comprador|adquirente)\b[^\n]{0,80}?(\d{8}[A-Z])/i])
+  const sellerDni = pickFirstMatch(text, [/\b(?:vendedor|transmitente)\b[^\n]{0,80}?(\d{8}[A-Z])/i])
+  const heirDni = pickFirstMatch(text, [/\b(?:heredero|adjudicatari[oa]|solicitante|adquirente)\b[^\n]{0,80}?(\d{8}[A-Z])/i])
+  const deceasedDni = pickFirstMatch(text, [/\b(?:causante|fallecid[oa]|transmitente)\b[^\n]{0,80}?(\d{8}[A-Z])/i])
+
+  roleSpecificDnis.buyerId = buyerDni || null
+  roleSpecificDnis.sellerId = sellerDni || null
+  roleSpecificDnis.heirId = heirDni || null
+  roleSpecificDnis.deceasedId = deceasedDni || null
+
+  if (!roleSpecificDnis.buyerId && buyerName && dniMatches.length === 1) roleSpecificDnis.buyerId = dniMatches[0]
+  if (!roleSpecificDnis.heirId && heirName && dniMatches.length === 1) roleSpecificDnis.heirId = dniMatches[0]
+  if (!roleSpecificDnis.deceasedId && deceasedName && dniMatches.length === 1) roleSpecificDnis.deceasedId = dniMatches[0]
+
   return {
     plates: unique(plateMatches),
     dniList: unique(dniMatches),
@@ -227,8 +323,14 @@ function extractFields(rawText) {
     buyerName,
     sellerName,
     ownerName,
+    heirName,
+    deceasedName,
+    ...roleSpecificDnis,
     amount: amount ? amount.replace(',', '.') : null,
     date,
+    deathDate,
+    signatureDate,
+    registrationDate,
     address,
     vin,
     issuer,
@@ -280,6 +382,15 @@ function inferTramiteHints(bestType, normalizedText) {
 
   if (normalizedText.includes('cambio de titularidad') || normalizedText.includes('transferencia del vehiculo') || normalizedText.includes('contrato de compraventa')) {
     hints.push('transferencia')
+  }
+
+  if (
+    [DOCUMENT_TYPES.CTI_HERENCIA, DOCUMENT_TYPES.MODELO_650, DOCUMENT_TYPES.RELACION_BIENES_650, DOCUMENT_TYPES.SOLICITUD_CAMBIO_FALLECIMIENTO, DOCUMENT_TYPES.CERTIFICADO_DEFUNCION].includes(bestType) ||
+    normalizedText.includes('fallecimiento') ||
+    normalizedText.includes('defuncion') ||
+    normalizedText.includes('sucesiones')
+  ) {
+    hints.push('transferencia_sucesion')
   }
 
   return unique(hints)
