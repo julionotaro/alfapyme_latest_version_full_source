@@ -2,6 +2,7 @@ export {
   fetchCases,
   fetchChecklist,
   reconcileChecklistTemplate,
+  updateCase,
   updateCaseStatus,
   updateChecklist,
   createProvisionalCase,
@@ -11,6 +12,7 @@ export {
   fetchDocuments,
   getDocumentSignedUrl,
   uploadDocument,
+  updateDocumentExtraction,
 } from './documents'
 
 export {

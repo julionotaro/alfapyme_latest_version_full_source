@@ -6,11 +6,13 @@ import {
   fetchDocuments,
   getDocumentSignedUrl,
   reconcileChecklistTemplate,
+  updateCase,
   updateCaseStatus,
   updateChecklist,
+  updateDocumentExtraction,
   uploadDocument,
 } from './services/core'
-import { evaluateExpedient, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion/index.js'
+import { evaluateExpedient, inferCaseFromDocuments, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion/index.js'
 import { inspectDocument } from './lib/document-ingestion'
 import { getBusinessTemplate } from './domain/templates/index.js'
 import { Sidebar } from './components/Sidebar'
@@ -38,6 +40,7 @@ export default function App() {
   const [tyrionAssessment, setTyrionAssessment] = useState(null)
   const [tyrionTransition, setTyrionTransition] = useState(null)
   const [uploadInspections, setUploadInspections] = useState([])
+  const [savingValidation, setSavingValidation] = useState(false)
 
   const selectedBusinessTemplate = useMemo(() => getBusinessTemplate(selected || {}), [selected])
 
@@ -57,7 +60,27 @@ export default function App() {
     try {
       const docs = await fetchDocuments(caseId)
       const items = await fetchChecklist(caseId)
-      const currentCase = cases.find((item) => item.id === caseId) || selected
+      let currentCase = cases.find((item) => item.id === caseId) || selected
+
+      if (currentCase && docs.length) {
+        const inference = inferCaseFromDocuments(docs)
+        const inferredPlate = docs.flatMap((item) => item?.ai_payload?.extracted_fields?.plates || []).find(Boolean) || null
+        const shouldRefreshCase =
+          inference.inferredCaseType !== 'pending_classification' &&
+          (currentCase.case_type !== inference.inferredCaseType || (!currentCase.vehicle_plate && inferredPlate))
+
+        if (shouldRefreshCase) {
+          currentCase = await updateCase(caseId, {
+            case_type: inference.inferredCaseType,
+            status: currentCase.status === 'received' || currentCase.status === 'triaged' ? 'triaged' : currentCase.status,
+            vehicle_plate: currentCase.vehicle_plate || inferredPlate,
+          })
+
+          setCases((rows) => rows.map((item) => (item.id === currentCase.id ? currentCase : item)))
+          setSelected((row) => (row?.id === currentCase.id ? currentCase : row))
+        }
+      }
+
       setDocuments(docs)
       if (currentCase) {
         const assessment = evaluateExpedient({ caseData: currentCase, documents: docs })
@@ -124,6 +147,51 @@ export default function App() {
       validation_status: 'validated',
     })
     await loadCaseDetails(selected.id)
+  }
+
+  async function saveValidationEdits(payload) {
+    if (!selected || !activeDoc) return
+
+    try {
+      setSavingValidation(true)
+
+      const nextFields = {
+        ...(activeDoc.ai_payload?.extracted_fields || {}),
+        buyerName: payload.buyerName || null,
+        sellerName: payload.sellerName || null,
+        ownerName: payload.ownerName || null,
+        heirName: payload.heirName || null,
+        deceasedName: payload.deceasedName || null,
+        plates: payload.plate ? [payload.plate] : [],
+        vin: payload.vin || null,
+      }
+
+      await updateDocumentExtraction(activeDoc.id, {
+        document_type: payload.documentType,
+        confidence: payload.forceReviewed ? 0.91 : activeDoc.confidence,
+        ai_payload: {
+          ...(activeDoc.ai_payload || {}),
+          extracted_fields: nextFields,
+          manual_review: true,
+          normalized_text: activeDoc.ai_payload?.normalized_text,
+          tramite_hints: activeDoc.ai_payload?.tramite_hints || [],
+        },
+      })
+
+      await updateCase(selected.id, {
+        case_type: payload.caseType,
+        vehicle_plate: payload.plate || selected.vehicle_plate || null,
+        status: 'human_validation',
+      })
+
+      await loadCasesList()
+      await loadCaseDetails(selected.id)
+      setMessage('Correcciones guardadas. Ahora sí, validación humana de verdad.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setSavingValidation(false)
+    }
   }
 
   async function applyTyrionSuggestion() {
@@ -249,6 +317,8 @@ export default function App() {
             checklist={checklist}
             tyrionAssessment={tyrionAssessment}
             onOpenTray={() => setView('workspace')}
+            onSaveEdits={saveValidationEdits}
+            saving={savingValidation}
           />
         )}
 

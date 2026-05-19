@@ -21,6 +21,7 @@ export {
   getCompatibleDocumentTypes,
 } from './document-catalog.js'
 export { analyzeDocument, buildSimulatedOcrText } from './document-intelligence.js'
+export { inferCaseFromDocuments } from './document-intelligence.js'
 export {
   TRANSFER_CASE_SUBTYPES,
   CANONICAL_TRANSFER_FIELDS,

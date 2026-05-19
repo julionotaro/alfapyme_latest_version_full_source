@@ -1,4 +1,39 @@
-import { Eye } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Eye, PencilLine, Save } from 'lucide-react'
+
+const DOCUMENT_TYPE_OPTIONS = [
+  'cti_transferencia',
+  'cti_herencia',
+  'permiso_circulacion',
+  'ficha_tecnica',
+  'contrato_factura',
+  'justificante_pago',
+  'dni_comprador',
+  'dni_vendedor',
+  'modelo_650',
+  'relacion_bienes_650',
+  'solicitud_cambio_fallecimiento',
+  'certificado_defuncion',
+  'mandato_gestoria',
+  'empadronamiento',
+  'solicitud_duplicado',
+  'solicitud_baja',
+  'dua',
+  'documentacion_extranjera',
+]
+
+const CASE_TYPE_OPTIONS = [
+  'transferencia',
+  'transferencia_sucesion',
+  'notificacion_venta',
+  'aceptacion_venta',
+  'cambio_domicilio',
+  'baja_temporal',
+  'baja_definitiva',
+  'matriculacion',
+  'matriculacion_importacion',
+  'duplicado',
+]
 
 export function ValidationView({
   cases = [],
@@ -11,16 +46,27 @@ export function ValidationView({
   checklist = [],
   tyrionAssessment,
   onOpenTray,
+  onSaveEdits,
+  saving = false,
 }) {
-  const reviewRows = cases.filter((item) => ['human_validation', 'waiting_human', 'blocked', 'failed', 'pending_client', 'triaged'].includes(item.status))
+  const reviewRows = cases.filter((item) => ['human_validation', 'waiting_human', 'blocked', 'failed', 'pending_client', 'triaged', 'received'].includes(item.status))
+
+  const formState = useMemo(() => buildFormState({ selected, activeDoc, tyrionAssessment }), [selected, activeDoc, tyrionAssessment])
+  const [draft, setDraft] = useState(formState)
+
+  useEffect(() => {
+    setDraft(formState)
+  }, [formState])
+
+  const lowConfidence = Number(activeDoc?.confidence ?? 0) < 0.85
 
   return (
-    <div className="validation-reference-layout">
+    <div className="validation-reference-layout validation-editable-layout">
       <section className="surface-card validation-list-panel">
         <div className="section-head compact-head">
           <div>
-            <h3>Origen · documentos</h3>
-            <p>Selecciona el expediente que quieras revisar.</p>
+            <h3>Origen · expedientes</h3>
+            <p>Abre uno y corrige donde la IA no llega sola.</p>
           </div>
         </div>
 
@@ -29,7 +75,7 @@ export function ValidationView({
             <button key={item.id} className={`review-case-item ${selected?.id === item.id ? 'on' : ''}`} onClick={() => onSelectCase(item)}>
               <b>{item.public_id}</b>
               <small>{item.client_name || 'Sin cliente'}</small>
-              <span>{humanize(item.case_type)}</span>
+              <span>{humanize(item.case_type || 'pending_classification')}</span>
             </button>
           )) : <p className="muted-line">No hay expedientes pendientes de validación.</p>}
         </div>
@@ -39,7 +85,8 @@ export function ValidationView({
         <div className="split-toolbar">
           <div>
             <span className="page-kicker">Área de trabajo</span>
-            <h3>{selected?.public_id || 'Validación split-view'}</h3>
+            <h3>{selected?.public_id || 'Validación IA'}</h3>
+            <p className="validation-subhead">Aquí deberías poder corregir, no solo mirar.</p>
           </div>
           <button onClick={onOpenTray}><Eye size={14} /> Abrir bandeja</button>
         </div>
@@ -68,77 +115,102 @@ export function ValidationView({
         </div>
       </section>
 
-      <section className="surface-card extraction-panel">
+      <section className="surface-card extraction-panel extraction-edit-panel">
         <div className="section-head compact-head">
           <div>
-            <h3>Resultado · datos extraídos</h3>
-            <p>Mostramos la lectura útil, no todo el barro interno.</p>
+            <h3>Corrección humana</h3>
+            <p>{lowConfidence ? 'La IA llegó con dudas. Aquí mandas tú.' : 'Puedes confirmar o corregir antes de seguir.'}</p>
           </div>
         </div>
 
-        <div className="extraction-fields">
-          <ExtractionField label="Trámite inferido" value={tyrionAssessment?.requirement?.label || humanize(selected?.case_type) || 'Sin inferencia aún'} confidence={confidenceBadge(activeDoc?.confidence)} />
-          <ExtractionField label="Documento activo" value={activeDoc?.file_name || 'Sin documento seleccionado'} confidence={confidenceBadge(activeDoc?.confidence)} />
-          <ExtractionField label="Tipo detectado" value={humanize(activeDoc?.document_type) || 'Sin detectar'} confidence={confidenceBadge(activeDoc?.confidence)} />
-          <ExtractionField label="Matrícula" value={selected?.vehicle_plate || getExtractedPlate(activeDoc) || 'No detectada todavía'} confidence={selected?.vehicle_plate || getExtractedPlate(activeDoc) ? 'ok' : 'revisar'} />
-          <ExtractionField label="Checklist corto" value={checklistSummary(checklist)} confidence={checklist.some((item) => item.is_blocking && item.status === 'missing') ? 'revisar' : 'ok'} />
-          <ExtractionField label="Acción siguiente" value={actionLabel(selected, tyrionAssessment, checklist)} confidence="ok" />
+        <div className="editable-summary-box">
+          <div>
+            <span className="page-kicker">Trámite inferido</span>
+            <b>{tyrionAssessment?.requirement?.label || humanize(selected?.case_type) || 'Sin inferencia aún'}</b>
+          </div>
+          <em className={`confidence-badge ${lowConfidence ? 'revisar' : 'ok'}`}>{lowConfidence ? 'baja' : 'alta'}</em>
+        </div>
+
+        <div className="validation-edit-grid">
+          <EditableField label="Trámite" type="select" value={draft.caseType} onChange={(value) => patchDraft(setDraft, 'caseType', value)} options={CASE_TYPE_OPTIONS} />
+          <EditableField label="Tipo documental" type="select" value={draft.documentType} onChange={(value) => patchDraft(setDraft, 'documentType', value)} options={DOCUMENT_TYPE_OPTIONS} />
+          <EditableField label="Matrícula" value={draft.plate} onChange={(value) => patchDraft(setDraft, 'plate', value.toUpperCase())} />
+          <EditableField label="Bastidor" value={draft.vin} onChange={(value) => patchDraft(setDraft, 'vin', value.toUpperCase())} />
+          <EditableField label="Comprador" value={draft.buyerName} onChange={(value) => patchDraft(setDraft, 'buyerName', value)} />
+          <EditableField label="Vendedor" value={draft.sellerName} onChange={(value) => patchDraft(setDraft, 'sellerName', value)} />
+          <EditableField label="Titular" value={draft.ownerName} onChange={(value) => patchDraft(setDraft, 'ownerName', value)} />
+          <EditableField label="Heredero" value={draft.heirName} onChange={(value) => patchDraft(setDraft, 'heirName', value)} />
+          <EditableField label="Fallecido" value={draft.deceasedName} onChange={(value) => patchDraft(setDraft, 'deceasedName', value)} />
+        </div>
+
+        <div className="editable-notes-box">
+          <div>
+            <PencilLine size={14} />
+            <span>{actionLabel(selected, tyrionAssessment, checklist)}</span>
+          </div>
+          <label className="review-checkbox">
+            <input type="checkbox" checked={draft.forceReviewed} onChange={(event) => patchDraft(setDraft, 'forceReviewed', event.target.checked)} />
+            Marcar como revisado manualmente
+          </label>
         </div>
 
         <div className="split-actions">
-          <button>Guardar cambios</button>
-          <button className="primary" onClick={onOpenTray}>Volver a bandeja</button>
+          <button onClick={() => setDraft(formState)} disabled={saving}>Restablecer</button>
+          <button className="primary" onClick={() => onSaveEdits?.(draft)} disabled={saving || !selected || !activeDoc}>
+            <Save size={14} /> {saving ? 'Guardando…' : 'Guardar corrección'}
+          </button>
         </div>
       </section>
     </div>
   )
 }
 
-function ExtractionField({ label, value, confidence }) {
+function EditableField({ label, value, onChange, type = 'text', options = [] }) {
   return (
-    <div className="extract-field">
+    <label className="editable-field">
       <span>{label}</span>
-      <div>
-        <b>{value}</b>
-        <em className={`confidence-badge ${confidence}`}>{confidenceLabel(confidence)}</em>
-      </div>
-    </div>
+      {type === 'select' ? (
+        <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
+          <option value="">Sin definir</option>
+          {options.map((option) => (
+            <option key={option} value={option}>{humanize(option)}</option>
+          ))}
+        </select>
+      ) : (
+        <input value={value || ''} onChange={(event) => onChange(event.target.value)} placeholder={`Corregir ${label.toLowerCase()}`} />
+      )}
+    </label>
   )
+}
+
+function buildFormState({ selected, activeDoc, tyrionAssessment }) {
+  const fields = activeDoc?.ai_payload?.extracted_fields || {}
+  return {
+    caseType: selected?.case_type || tyrionAssessment?.requirement?.code || '',
+    documentType: activeDoc?.document_type || '',
+    plate: selected?.vehicle_plate || fields.plates?.[0] || '',
+    vin: fields.vin || '',
+    buyerName: fields.buyerName || '',
+    sellerName: fields.sellerName || '',
+    ownerName: fields.ownerName || '',
+    heirName: fields.heirName || '',
+    deceasedName: fields.deceasedName || '',
+    forceReviewed: Number(activeDoc?.confidence ?? 0) < 0.85,
+  }
+}
+
+function patchDraft(setDraft, key, value) {
+  setDraft((current) => ({ ...current, [key]: value }))
 }
 
 function humanize(value) {
   return String(value || '').replace(/_/g, ' ')
 }
 
-function getExtractedPlate(doc) {
-  return doc?.ai_payload?.extracted_fields?.plates?.[0] || ''
-}
-
-function checklistSummary(checklist = []) {
-  if (!checklist.length) return 'Sin checklist proyectado'
-  const missing = checklist.filter((item) => item.status === 'missing').length
-  const validated = checklist.filter((item) => item.validation_status === 'validated').length
-  return `${validated} validado(s) · ${missing} faltante(s)`
-}
-
 function actionLabel(selected, assessment, checklist = []) {
   const missingBlocking = checklist.filter((item) => item.is_blocking && item.status === 'missing').length
-  if (missingBlocking > 0) return 'Pedir o validar faltantes bloqueantes'
-  if (assessment?.lowConfidenceDocuments?.length) return 'Revisar lectura dudosa'
-  if (selected?.status === 'ready_for_output') return 'Ejecutar salida'
-  return 'Confirmar lectura del expediente'
-}
-
-function confidenceBadge(value) {
-  const n = Number(value)
-  if (!Number.isFinite(n) || n <= 0) return 'medio'
-  if (n >= 0.9) return 'ok'
-  if (n >= 0.75) return 'medio'
-  return 'revisar'
-}
-
-function confidenceLabel(value) {
-  if (value === 'ok') return 'alta'
-  if (value === 'revisar') return 'revisar'
-  return 'media'
+  if (missingBlocking > 0) return 'Antes de seguir, sigue habiendo faltantes bloqueantes.'
+  if (assessment?.lowConfidenceDocuments?.length) return 'Corrige los campos dudosos y confirma la lectura.'
+  if (selected?.status === 'ready_for_output') return 'Si todo cuadra, el expediente ya puede salir.'
+  return 'Confirma o corrige la lectura antes de avanzar.'
 }

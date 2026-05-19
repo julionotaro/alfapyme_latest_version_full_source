@@ -95,3 +95,37 @@ export async function uploadDocument({ caseId, organizationId, file }) {
 
   return data
 }
+
+export async function updateDocumentExtraction(documentId, payload = {}) {
+  const { ai_payload, ...rest } = payload
+  const updatePayload = {
+    ...rest,
+  }
+
+  if (ai_payload) updatePayload.ai_payload = ai_payload
+
+  const { data, error } = await supabase
+    .from('documents')
+    .update(updatePayload)
+    .eq('id', documentId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  await logEvent({
+    organizationId: data.organization_id,
+    caseId: data.case_id,
+    documentId: data.id,
+    action: 'document_extraction_corrected',
+    entityType: 'document',
+    entityId: data.id,
+    metadata: {
+      document_type: data.document_type,
+      confidence: data.confidence,
+      extracted_fields: data.ai_payload?.extracted_fields || {},
+    },
+  })
+
+  return data
+}

@@ -444,6 +444,76 @@ export function analyzeDocument({ fileName = '', ocrText = '' }) {
   }
 }
 
+export function inferCaseFromDocuments(documents = []) {
+  const scored = new Map()
+  const addScore = (key, value) => {
+    if (!key) return
+    scored.set(key, (scored.get(key) || 0) + value)
+  }
+
+  for (const document of documents) {
+    const confidence = Number(document?.confidence ?? document?.ai_payload?.confidence ?? 0.7)
+    const weight = Math.max(0.5, confidence)
+    const hints = document?.ai_payload?.tramite_hints || document?.tramiteHints || []
+    const docType = document?.document_type || document?.documentType
+    const fields = document?.ai_payload?.extracted_fields || document?.extractedFields || {}
+
+    hints.forEach((hint) => addScore(hint, weight * 3))
+
+    if ([DOCUMENT_TYPES.CTI_HERENCIA, DOCUMENT_TYPES.MODELO_650, DOCUMENT_TYPES.RELACION_BIENES_650, DOCUMENT_TYPES.SOLICITUD_CAMBIO_FALLECIMIENTO, DOCUMENT_TYPES.CERTIFICADO_DEFUNCION].includes(docType)) {
+      addScore('transferencia_sucesion', weight * 5)
+    }
+
+    if ([DOCUMENT_TYPES.CTI_TRANSFERENCIA, DOCUMENT_TYPES.CONTRATO_FACTURA, DOCUMENT_TYPES.PERMISO_CIRCULACION].includes(docType)) {
+      addScore('transferencia', weight * 2)
+    }
+
+    if ([DOCUMENT_TYPES.DUA, DOCUMENT_TYPES.DOCUMENTACION_EXTRANJERA, DOCUMENT_TYPES.COC_FICHA_REDUCIDA].includes(docType)) {
+      addScore('matriculacion_importacion', weight * 4)
+    }
+
+    if (docType === DOCUMENT_TYPES.EMPADRONAMIENTO || docType === DOCUMENT_TYPES.JUSTIFICANTE_DOMICILIO) {
+      addScore('cambio_domicilio', weight * 3)
+    }
+
+    if (docType === DOCUMENT_TYPES.SOLICITUD_BAJA) {
+      addScore('baja_temporal', weight * 3)
+      const normalized = String(document?.ai_payload?.normalized_text || document?.normalizedText || '').toLowerCase()
+      if (normalized.includes('definitiva')) addScore('baja_definitiva', weight * 2)
+    }
+
+    if (docType === DOCUMENT_TYPES.SOLICITUD_DUPLICADO || docType === DOCUMENT_TYPES.DECLARACION_EXTRAVIO) {
+      addScore('duplicado', weight * 4)
+    }
+
+    if (fields.formCodes?.includes('modelo_620') || fields.formCodes?.includes('modelo_621')) {
+      addScore('transferencia', weight * 3)
+    }
+  }
+
+  const ranked = [...scored.entries()].sort((a, b) => b[1] - a[1])
+  const [best, bestScore = 0] = ranked[0] || []
+  const secondScore = ranked[1]?.[1] || 0
+
+  if (!best || bestScore < 2.5) {
+    return {
+      inferredCaseType: 'pending_classification',
+      confidence: 0.4,
+      candidates: ranked,
+      summary: 'Aún no hay suficiente base documental para inferir el trámite con criterio.',
+    }
+  }
+
+  return {
+    inferredCaseType: best,
+    confidence: Number(Math.min(0.97, Math.max(0.55, 0.52 + bestScore / 12 - secondScore / 40)).toFixed(2)),
+    candidates: ranked,
+    summary: ranked.length > 1
+      ? `La documentación apunta sobre todo a ${best.replace(/_/g, ' ')}, aunque todavía existe señal secundaria hacia ${ranked[1][0].replace(/_/g, ' ')}.`
+      : `La documentación apunta de forma bastante clara a ${best.replace(/_/g, ' ')}.`
+  }
+}
+
 export function buildSimulatedOcrText(file) {
   const name = String(file?.name || '').replace(/[_-]+/g, ' ')
   return `Documento cargado: ${name}`

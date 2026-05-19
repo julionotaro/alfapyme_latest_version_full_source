@@ -82,6 +82,29 @@ export async function updateCaseStatus(caseId, status) {
   return data
 }
 
+export async function updateCase(caseId, payload = {}) {
+  const cleanPayload = Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined))
+
+  const { data, error } = await supabase
+    .from('cases')
+    .update({ ...cleanPayload, updated_at: new Date().toISOString() })
+    .eq('id', caseId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  await logEvent({
+    caseId,
+    action: 'case_updated',
+    entityType: 'case',
+    entityId: caseId,
+    metadata: cleanPayload,
+  })
+
+  return data
+}
+
 export async function fetchChecklist(caseId) {
   const { data, error } = await supabase
     .from('case_document_checklist')
