@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, LoaderCircle } from 'lucide-react'
 import { CASE_STATUS_LABELS } from '../constants'
+import { shouldUseMvpDocumentReviewMode } from '../domain/tyrion/mvp-mode.js'
 
 const REVIEW_STATUSES = ['human_validation', 'waiting_human', 'waiting_input', 'triaged']
 const IN_PROGRESS_STATUSES = ['received', 'processing', 'delivering']
@@ -11,6 +12,7 @@ export function HomeView({ cases = [], onSelectCase, onGoToTray }) {
   const inProgress = cases.filter((item) => IN_PROGRESS_STATUSES.includes(item.status)).length
   const ready = cases.filter((item) => READY_STATUSES.includes(item.status)).length
   const blocked = cases.filter((item) => BLOCKED_STATUSES.includes(item.status)).length
+  const mvpDocumentMode = shouldUseMvpDocumentReviewMode()
 
   const rows = [...cases]
     .sort((a, b) => severityRank(a.status) - severityRank(b.status) || String(a.public_id).localeCompare(String(b.public_id)))
@@ -19,10 +21,10 @@ export function HomeView({ cases = [], onSelectCase, onGoToTray }) {
   return (
     <div className="dashboard-view">
       <section className="dashboard-kpis">
-        <KpiCard title="Por validar" value={pendingReview} note="Requieren tu atención" tone="danger" onClick={onGoToTray} />
+        <KpiCard title="Por revisar" value={pendingReview} note="Lecturas o decisiones a revisar" tone="danger" onClick={onGoToTray} />
         <KpiCard title="En proceso" value={inProgress} note="Tyrion está trabajando" tone="warning" onClick={onGoToTray} />
-        <KpiCard title="Listos para salida" value={ready} note="Listos para ejecutar" tone="success" onClick={onGoToTray} />
-        <KpiCard title="Bloqueados" value={blocked} note="Hay algo para destrabar" tone="neutral" onClick={onGoToTray} />
+        <KpiCard title="Listos" value={ready} note="Sin contradicciones ni dudas visibles" tone="success" onClick={onGoToTray} />
+        {!mvpDocumentMode && <KpiCard title="Bloqueados" value={blocked} note="Hay algo para destrabar" tone="neutral" onClick={onGoToTray} />}
       </section>
 
       <section className="surface-card">
@@ -89,7 +91,7 @@ function priorityLabel(status) {
 function nextActionLabel(status) {
   if (['blocked', 'failed'].includes(status)) return 'Revisar bloqueo'
   if (['human_validation', 'waiting_human'].includes(status)) return 'Validar lectura'
-  if (status === 'pending_client') return 'Pedir faltante'
+  if (status === 'pending_client') return shouldUseMvpDocumentReviewMode() ? 'Revisar caso' : 'Pedir faltante'
   if (status === 'ready_for_output') return 'Ejecutar salida'
   return 'Abrir expediente'
 }

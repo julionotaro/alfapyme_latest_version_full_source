@@ -37,7 +37,7 @@ export function WorkspaceView({
 
         <div className="tray-mini-kpis">
           <TrayStat label="Por revisar" value={focusCases.filter((item) => ['triaged', 'human_validation', 'waiting_human'].includes(item.status)).length} tone="warning" />
-          <TrayStat label="Bloqueados" value={focusCases.filter((item) => ['blocked', 'failed', 'pending_client'].includes(item.status)).length} tone="danger" />
+          {!shouldUseMvpDocumentReviewMode() && <TrayStat label="Bloqueados" value={focusCases.filter((item) => ['blocked', 'failed', 'pending_client'].includes(item.status)).length} tone="danger" />}
           <TrayStat label="Listos" value={focusCases.filter((item) => ['ready_for_output'].includes(item.status)).length} tone="success" />
         </div>
 
@@ -112,7 +112,7 @@ export function WorkspaceView({
               </div>
               <div className="ops-band-item">
                 <span>Conflictos</span>
-                <b>{tyrionAssessment?.uiConflicts?.blockedCount || 0} bloqueantes · {tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables</b>
+                <b>{shouldUseMvpDocumentReviewMode() ? `${tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables` : `${tyrionAssessment?.uiConflicts?.blockedCount || 0} bloqueantes · ${tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables`}</b>
               </div>
               <div className="ops-band-item">
                 <span>Siguiente paso</span>
@@ -141,7 +141,7 @@ export function WorkspaceView({
 
             <div className="workspace-clean-grid">
               <div className="card">
-                <h4>Qué falta para avanzar</h4>
+                <h4>{shouldUseMvpDocumentReviewMode() ? 'Qué revisar ahora' : 'Qué falta para avanzar'}</h4>
                 <div className="signal-list">
                   {buildMissingSignals({ checklist, tyrionAssessment, selected }).map((item) => (
                     <div key={item.label} className={`signal-item ${item.tone}`}>
@@ -175,6 +175,7 @@ export function WorkspaceView({
             </div>
 
             <div className="workspace-clean-grid secondary-grid">
+              {!shouldUseMvpDocumentReviewMode() && (
               <div className="card">
                 <h4>Checklist corto</h4>
                 <div className="checklist-short">
@@ -192,6 +193,7 @@ export function WorkspaceView({
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="card">
                 <h4>Lectura operativa</h4>
@@ -298,7 +300,7 @@ function getDetectedKeyDataLabel(selected, documents = []) {
 
 function getPrimaryActionTitle(selected, assessment, missingBlocking) {
   if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return 'Pedir o validar los documentos que bloquean el expediente'
-  if (assessment?.uiConflicts?.blockedCount > 0) return 'Revisar el conflicto bloqueante antes de avanzar'
+  if (assessment?.uiConflicts?.blockedCount > 0) return shouldUseMvpDocumentReviewMode() ? 'Revisar contradicción detectada' : 'Revisar el conflicto bloqueante antes de avanzar'
   if (assessment?.lowConfidenceDocuments?.length) return 'Revisar documento con lectura poco fiable'
   if (selected?.status === 'triaged') return 'Confirmar el trámite inferido'
   if (selected?.status === 'ready_for_output') return 'Ejecutar la salida del expediente'
@@ -307,11 +309,11 @@ function getPrimaryActionTitle(selected, assessment, missingBlocking) {
 
 function getPrimaryActionDetail(selected, assessment, missingBlocking) {
   if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return `Hay ${missingBlocking} faltante(s) bloqueante(s). Hasta resolverlos, moverlo a salida sería maquillar el problema.`
-  if (assessment?.uiConflicts?.blockedCount > 0) return `${assessment.uiConflicts.blockedCount} conflicto(s) bloqueante(s) detectado(s) por la IA.`
+  if (assessment?.uiConflicts?.blockedCount > 0) return shouldUseMvpDocumentReviewMode() ? 'La IA detectó una contradicción entre documentos y conviene revisarla antes de seguir.' : `${assessment.uiConflicts.blockedCount} conflicto(s) bloqueante(s) detectado(s) por la IA.`
   if (assessment?.lowConfidenceDocuments?.length) return 'El expediente no está frenado por faltantes ideales: quedó en revisión porque al menos un documento se leyó con poca fiabilidad.'
   if (selected?.status === 'triaged') return 'El sistema ya sugiere un trámite probable; ahora toca validarlo o corregirlo.'
   if (selected?.status === 'ready_for_output') return 'El expediente ya está listo para pasar al modo de salida correspondiente.'
-  return assessment?.decision?.actionHint || 'Usa esta bandeja para decidir qué falta y qué hacer después.'
+  return assessment?.decision?.actionHint || (shouldUseMvpDocumentReviewMode() ? 'Usa esta bandeja para revisar lectura, confianza y contradicciones.' : 'Usa esta bandeja para decidir qué falta y qué hacer después.')
 }
 
 function buildMissingSignals({ checklist = [], tyrionAssessment, selected }) {

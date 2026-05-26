@@ -223,7 +223,7 @@ function humanize(value) {
 function actionLabel(selected, assessment, checklist = []) {
   const missingBlocking = checklist.filter((item) => item.is_blocking && item.status === 'missing').length
   if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return 'Antes de seguir, sigue habiendo faltantes bloqueantes.'
-  if (assessment?.lowConfidenceDocuments?.length) return 'Esto no está bloqueado por faltantes: quedó en revisión porque al menos un documento no se leyó con fiabilidad suficiente.'
+  if (assessment?.lowConfidenceDocuments?.length) return 'Quedó en revisión porque al menos un documento no se leyó con fiabilidad suficiente.'
   if (selected?.status === 'ready_for_output') return 'Si todo cuadra, el expediente ya puede salir.'
   return 'Confirma o corrige la lectura antes de avanzar.'
 }

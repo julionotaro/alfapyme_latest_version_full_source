@@ -1,4 +1,5 @@
 import { getDocumentConfidenceReasons } from '../domain/tyrion/confidence-explanations.js'
+import { shouldUseMvpDocumentReviewMode } from '../domain/tyrion/mvp-mode.js'
 
 export function ViewerView({ selected, documents, activeDoc, setActiveDoc, docUrl, checklist }) {
   return (
@@ -68,12 +69,16 @@ export function ViewerView({ selected, documents, activeDoc, setActiveDoc, docUr
           </>
         )}
 
-        <h4>Checklist</h4>
-        {checklist.map((item) => (
-          <p key={item.id}>
-            • {item.document_label}: <b>{item.validation_status}</b>
-          </p>
-        ))}
+        {!shouldUseMvpDocumentReviewMode() && (
+          <>
+            <h4>Checklist</h4>
+            {checklist.map((item) => (
+              <p key={item.id}>
+                • {item.document_label}: <b>{item.validation_status}</b>
+              </p>
+            ))}
+          </>
+        )}
       </section>
     </div>
   )
