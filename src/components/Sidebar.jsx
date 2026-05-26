@@ -18,7 +18,7 @@ export function Sidebar({ view, onChange }) {
         <div className="brand-mark">A</div>
         <div>
           <h1>Alfa‑Pyme</h1>
-          <p>Ops Cockpit · v0.8.0</p>
+          <p>Ops Cockpit · v0.8.1</p>
         </div>
       </div>
 
