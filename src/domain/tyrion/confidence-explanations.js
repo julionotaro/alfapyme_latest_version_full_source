@@ -27,7 +27,7 @@ export function getDocumentConfidenceReasons(document) {
   const normalizedType = String(document.document_type || '')
 
   if (confidence > 0 && confidence < 0.85) {
-    reasons.push(`La clasificación quedó por debajo del umbral operativo (conf. ${confidence.toFixed(2)} < 0.85).`)
+    reasons.push(`La IA no pudo clasificar este documento con suficiente seguridad (conf. ${confidence.toFixed(2)} de 0.85 mínimo).`)
   }
 
   if (ingestionError) {
@@ -35,25 +35,31 @@ export function getDocumentConfidenceReasons(document) {
   }
 
   if (warnings.length) {
-    warnings.slice(0, 3).forEach((warning) => reasons.push(`La ingesta avisó: ${warning}.`))
+    warnings.slice(0, 3).forEach((warning) => {
+      if (warning === 'ocr_fallback_used') {
+        reasons.push('El lector principal no extrajo bien el texto y el sistema tuvo que recurrir a un OCR alternativo; eso reduce la fiabilidad de la lectura.')
+        return
+      }
+      reasons.push(`La ingesta devolvió una advertencia técnica: ${warning}.`)
+    })
   }
 
   if (ocrText.length > 0 && ocrText.length < 80) {
-    reasons.push('El OCR recuperó muy poco texto útil del documento.')
+    reasons.push('Se recuperó muy poco texto útil del documento, así que la clasificación salió con base débil.')
   }
 
   if (!ocrText.length) {
-    reasons.push('No se recuperó texto OCR utilizable.')
+    reasons.push('No se pudo recuperar texto utilizable del documento.')
   }
 
   if (signals === 0) {
-    reasons.push('No se detectaron campos clave extraíbles en el documento.')
+    reasons.push('La IA no encontró campos clave claros para apoyar la lectura del documento.')
   } else if (signals <= 1) {
     reasons.push('Se detectaron muy pocas señales útiles para clasificar y contrastar el documento.')
   }
 
   if (normalizedType === 'documento_trafico') {
-    reasons.push('La IA no pudo concretar mejor el tipo documental y lo dejó en una categoría demasiado genérica.')
+    reasons.push('La IA no pudo concretar bien el tipo documental y lo dejó en una categoría demasiado genérica.')
   }
 
   return [...new Set(reasons)]

@@ -299,7 +299,7 @@ function getDetectedKeyDataLabel(selected, documents = []) {
 function getPrimaryActionTitle(selected, assessment, missingBlocking) {
   if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return 'Pedir o validar los documentos que bloquean el expediente'
   if (assessment?.uiConflicts?.blockedCount > 0) return 'Revisar el conflicto bloqueante antes de avanzar'
-  if (assessment?.lowConfidenceDocuments?.length) return 'Revisar documento con lectura dudosa'
+  if (assessment?.lowConfidenceDocuments?.length) return 'Revisar documento con lectura poco fiable'
   if (selected?.status === 'triaged') return 'Confirmar el trámite inferido'
   if (selected?.status === 'ready_for_output') return 'Ejecutar la salida del expediente'
   return 'Revisar el expediente y confirmar el siguiente paso'
@@ -308,7 +308,7 @@ function getPrimaryActionTitle(selected, assessment, missingBlocking) {
 function getPrimaryActionDetail(selected, assessment, missingBlocking) {
   if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return `Hay ${missingBlocking} faltante(s) bloqueante(s). Hasta resolverlos, moverlo a salida sería maquillar el problema.`
   if (assessment?.uiConflicts?.blockedCount > 0) return `${assessment.uiConflicts.blockedCount} conflicto(s) bloqueante(s) detectado(s) por la IA.`
-  if (assessment?.lowConfidenceDocuments?.length) return 'La inferencia existe, pero hay documentos con baja confianza que conviene abrir antes de confirmar.'
+  if (assessment?.lowConfidenceDocuments?.length) return 'El expediente no está frenado por faltantes ideales: quedó en revisión porque al menos un documento se leyó con poca fiabilidad.'
   if (selected?.status === 'triaged') return 'El sistema ya sugiere un trámite probable; ahora toca validarlo o corregirlo.'
   if (selected?.status === 'ready_for_output') return 'El expediente ya está listo para pasar al modo de salida correspondiente.'
   return assessment?.decision?.actionHint || 'Usa esta bandeja para decidir qué falta y qué hacer después.'
