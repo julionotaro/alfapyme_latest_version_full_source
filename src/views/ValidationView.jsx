@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Eye, PencilLine, Save } from 'lucide-react'
+import { getDocumentConfidenceReasons } from '../domain/tyrion/confidence-explanations.js'
+import { shouldUseMvpDocumentReviewMode } from '../domain/tyrion/mvp-mode.js'
 
 const DOCUMENT_TYPE_OPTIONS = [
   'cti_transferencia',
@@ -131,6 +133,17 @@ export function ValidationView({
           <em className={`confidence-badge ${lowConfidence ? 'revisar' : 'ok'}`}>{lowConfidence ? 'baja' : 'alta'}</em>
         </div>
 
+        {lowConfidence && activeDoc && (
+          <div className="low tyrion-low-confidence">
+            <b>Por qué la confianza es baja</b>
+            <ul>
+              {getDocumentConfidenceReasons(activeDoc).map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="validation-edit-grid">
           <EditableField label="Trámite" type="select" value={draft.caseType} onChange={(value) => patchDraft(setDraft, 'caseType', value)} options={CASE_TYPE_OPTIONS} />
           <EditableField label="Tipo documental" type="select" value={draft.documentType} onChange={(value) => patchDraft(setDraft, 'documentType', value)} options={DOCUMENT_TYPE_OPTIONS} />
@@ -209,7 +222,7 @@ function humanize(value) {
 
 function actionLabel(selected, assessment, checklist = []) {
   const missingBlocking = checklist.filter((item) => item.is_blocking && item.status === 'missing').length
-  if (missingBlocking > 0) return 'Antes de seguir, sigue habiendo faltantes bloqueantes.'
+  if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return 'Antes de seguir, sigue habiendo faltantes bloqueantes.'
   if (assessment?.lowConfidenceDocuments?.length) return 'Corrige los campos dudosos y confirma la lectura.'
   if (selected?.status === 'ready_for_output') return 'Si todo cuadra, el expediente ya puede salir.'
   return 'Confirma o corrige la lectura antes de avanzar.'

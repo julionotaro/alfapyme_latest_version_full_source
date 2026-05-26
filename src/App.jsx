@@ -13,6 +13,7 @@ import {
   uploadDocument,
 } from './services/core'
 import { evaluateExpedient, inferCaseFromDocuments, projectChecklistFromRequirement, resolveWorkflowTransition } from './domain/tyrion/index.js'
+import { shouldUseMvpDocumentReviewMode } from './domain/tyrion/mvp-mode.js'
 import { inspectDocument } from './lib/document-ingestion'
 import { getBusinessTemplate } from './domain/templates/index.js'
 import { Sidebar } from './components/Sidebar'
@@ -132,7 +133,7 @@ export default function App() {
   }, [activeDoc?.id])
 
   const missingBlocking = useMemo(
-    () => checklist.filter((item) => item.is_blocking && item.status === 'missing').length,
+    () => (shouldUseMvpDocumentReviewMode() ? 0 : checklist.filter((item) => item.is_blocking && item.status === 'missing').length),
     [checklist],
   )
 

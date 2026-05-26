@@ -1,5 +1,7 @@
 import { Eye } from 'lucide-react'
 import { CASE_STATUS_LABELS } from '../constants'
+import { getDocumentConfidenceSummary } from '../domain/tyrion/confidence-explanations.js'
+import { shouldUseMvpDocumentReviewMode } from '../domain/tyrion/mvp-mode.js'
 
 export function WorkspaceView({
   cases,
@@ -157,6 +159,7 @@ export function WorkspaceView({
                     <div>
                       <b>{document.file_name}</b>
                       <small>{humanizeDocType(document.document_type)} · conf. {document.confidence ?? 'n/d'}</small>
+                      {Number(document.confidence ?? 0) < 0.85 && <small>{getDocumentConfidenceSummary(document)}</small>}
                     </div>
                     <button
                       onClick={() => {
@@ -294,7 +297,7 @@ function getDetectedKeyDataLabel(selected, documents = []) {
 }
 
 function getPrimaryActionTitle(selected, assessment, missingBlocking) {
-  if (missingBlocking > 0) return 'Pedir o validar los documentos que bloquean el expediente'
+  if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return 'Pedir o validar los documentos que bloquean el expediente'
   if (assessment?.uiConflicts?.blockedCount > 0) return 'Revisar el conflicto bloqueante antes de avanzar'
   if (assessment?.lowConfidenceDocuments?.length) return 'Revisar documento con lectura dudosa'
   if (selected?.status === 'triaged') return 'Confirmar el trámite inferido'
@@ -303,7 +306,7 @@ function getPrimaryActionTitle(selected, assessment, missingBlocking) {
 }
 
 function getPrimaryActionDetail(selected, assessment, missingBlocking) {
-  if (missingBlocking > 0) return `Hay ${missingBlocking} faltante(s) bloqueante(s). Hasta resolverlos, moverlo a salida sería maquillar el problema.`
+  if (!shouldUseMvpDocumentReviewMode() && missingBlocking > 0) return `Hay ${missingBlocking} faltante(s) bloqueante(s). Hasta resolverlos, moverlo a salida sería maquillar el problema.`
   if (assessment?.uiConflicts?.blockedCount > 0) return `${assessment.uiConflicts.blockedCount} conflicto(s) bloqueante(s) detectado(s) por la IA.`
   if (assessment?.lowConfidenceDocuments?.length) return 'La inferencia existe, pero hay documentos con baja confianza que conviene abrir antes de confirmar.'
   if (selected?.status === 'triaged') return 'El sistema ya sugiere un trámite probable; ahora toca validarlo o corregirlo.'
@@ -313,12 +316,15 @@ function getPrimaryActionDetail(selected, assessment, missingBlocking) {
 
 function buildMissingSignals({ checklist = [], tyrionAssessment, selected }) {
   const items = []
+  const mvpDocumentMode = shouldUseMvpDocumentReviewMode()
   const blocking = checklist.filter((item) => item.is_blocking && (item.status === 'missing' || ['missing', 'needs_review', 'rejected'].includes(item.validation_status)))
-  blocking.slice(0, 4).forEach((item) => {
-    items.push({ label: item.document_label, detail: item.status === 'missing' ? 'Documento faltante.' : 'Documento pendiente de validación.', tone: 'danger' })
-  })
+  if (!mvpDocumentMode) {
+    blocking.slice(0, 4).forEach((item) => {
+      items.push({ label: item.document_label, detail: item.status === 'missing' ? 'Documento faltante.' : 'Documento pendiente de validación.', tone: 'danger' })
+    })
+  }
   tyrionAssessment?.lowConfidenceDocuments?.slice(0, 2).forEach((doc) => {
-    items.push({ label: doc.file_name, detail: `Lectura dudosa (${doc.confidence ?? 'n/d'}).`, tone: 'warning' })
+    items.push({ label: doc.file_name, detail: getDocumentConfidenceSummary(doc), tone: 'warning' })
   })
   if (tyrionAssessment?.uiConflicts?.items?.length) {
     tyrionAssessment.uiConflicts.items.slice(0, 2).forEach((item) => {
@@ -326,7 +332,15 @@ function buildMissingSignals({ checklist = [], tyrionAssessment, selected }) {
     })
   }
   if (!items.length) {
-    items.push({ label: 'Sin bloqueos visibles', detail: selected?.status === 'ready_for_output' ? 'El expediente puede continuar a salida.' : 'No aparecen faltantes críticos en esta instancia.', tone: 'success' })
+    items.push({
+      label: 'Sin bloqueos visibles',
+      detail: selected?.status === 'ready_for_output'
+        ? 'El expediente puede continuar a salida.'
+        : mvpDocumentMode
+          ? 'En esta fase mandan la lectura, la contradicción y la confianza; los faltantes ideales quedan apartados.'
+          : 'No aparecen faltantes críticos en esta instancia.',
+      tone: 'success',
+    })
   }
   return items
 }

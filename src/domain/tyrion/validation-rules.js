@@ -3,6 +3,7 @@ import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from './document-types.js'
 import { getTramiteRequirement, TYRION_CASE_STATES } from './tramite-requirements.js'
 import { evaluateTransferCrossChecks, TRANSFER_CASE_SUBTYPES } from './transfer-case-rules.js'
 import { buildUiConflictSummary } from './ui-conflicts.js'
+import { shouldUseMvpDocumentReviewMode } from './mvp-mode.js'
 
 function buildDocumentTypeSet(documents = []) {
   return new Set(documents.map((document) => document.document_type).filter(Boolean))
@@ -167,6 +168,7 @@ function evaluateCrossDocumentValidations({ caseData, documents = [] }) {
 
 export function evaluateExpedient({ caseData, documents = [] }) {
   const requirement = getTramiteRequirement(caseData?.case_type, caseData)
+  const mvpDocumentMode = shouldUseMvpDocumentReviewMode()
   const documentTypes = buildDocumentTypeSet(documents)
 
   const missingRequiredDocuments = requirement.requiredDocuments.filter((type) => !documentTypes.has(type))
@@ -176,7 +178,7 @@ export function evaluateExpedient({ caseData, documents = [] }) {
   const uiConflicts = buildUiConflictSummary(failedCrossValidations)
 
   const escalations = []
-  if (missingRequiredDocuments.length > 0) escalations.push('missing_required_documents')
+  if (!mvpDocumentMode && missingRequiredDocuments.length > 0) escalations.push('missing_required_documents')
   if (lowConfidenceDocuments.length > 0) escalations.push('low_confidence_documents')
   if (failedCrossValidations.length > 0) escalations.push('cross_document_inconsistency')
   if (requirement.family === 'bajas' && documents.length === 0) escalations.push('missing_core_vehicle_support')
@@ -196,7 +198,7 @@ export function evaluateExpedient({ caseData, documents = [] }) {
     owner: getHumanReviewOwner(reason),
   }))
 
-  const decision = inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escalations })
+  const decision = inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escalations, mvpDocumentMode })
 
   return {
     requirement,
@@ -211,11 +213,12 @@ export function evaluateExpedient({ caseData, documents = [] }) {
     actionableEscalations,
     escalations,
     decision,
+    mvpDocumentMode,
   }
 }
 
-function inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escalations }) {
-  if (missingRequiredDocuments.length > 0) {
+function inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escalations, mvpDocumentMode }) {
+  if (!mvpDocumentMode && missingRequiredDocuments.length > 0) {
     return {
       targetState: TYRION_CASE_STATES.PENDING_DOCUMENTS,
       reason: 'faltan_documentos_obligatorios',
@@ -229,7 +232,9 @@ function inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escal
       targetState: TYRION_CASE_STATES.HUMAN_VALIDATION,
       reason: 'requiere_revision_humana',
       canAutoAdvance: false,
-      actionHint: 'Escalar expediente a revisión humana antes de continuar.',
+      actionHint: mvpDocumentMode
+        ? 'Revisar contradicciones o documentos dudosos antes de continuar; los faltantes ideales quedan apartados en esta fase.'
+        : 'Escalar expediente a revisión humana antes de continuar.',
     }
   }
 
@@ -237,6 +242,8 @@ function inferDecision({ missingRequiredDocuments, lowConfidenceDocuments, escal
     targetState: TYRION_CASE_STATES.READY_FOR_OUTPUT,
     reason: 'completitud_minima_superada',
     canAutoAdvance: true,
-    actionHint: 'Puede pasar a preparación de salida si no hay controles externos pendientes.',
+    actionHint: mvpDocumentMode
+      ? 'Puede continuar mientras no haya contradicciones reales ni lectura dudosa relevante.'
+      : 'Puede pasar a preparación de salida si no hay controles externos pendientes.',
   }
 }

@@ -1,3 +1,5 @@
+import { getDocumentConfidenceReasons } from '../domain/tyrion/confidence-explanations.js'
+
 export function ViewerView({ selected, documents, activeDoc, setActiveDoc, docUrl, checklist }) {
   return (
     <div className="viewer">
@@ -54,7 +56,14 @@ export function ViewerView({ selected, documents, activeDoc, setActiveDoc, docUr
               </p>
             )}
             {Number(activeDoc.confidence) < 0.85 && (
-              <div className="low">Baja confianza: requiere revisión humana.</div>
+              <div className="low">
+                <b>Baja confianza:</b>
+                <ul>
+                  {getDocumentConfidenceReasons(activeDoc).map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </>
         )}
