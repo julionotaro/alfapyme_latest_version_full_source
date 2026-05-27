@@ -25,11 +25,7 @@ export async function extractEmbeddedPdfText(file) {
   for (let pageNumber = 1; pageNumber <= pages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber)
     const content = await page.getTextContent()
-    const pageText = content.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+    const pageText = rebuildPdfPageText(content.items)
 
     if (pageText) textChunks.push(pageText)
   }
@@ -39,6 +35,48 @@ export async function extractEmbeddedPdfText(file) {
     pageCount: pdf.numPages,
     pagesProcessed: pages,
   }
+}
+
+function rebuildPdfPageText(items = []) {
+  const textItems = items
+    .filter((item) => 'str' in item && String(item.str || '').trim())
+    .map((item) => ({
+      text: String(item.str || '').trim(),
+      x: Array.isArray(item.transform) ? Number(item.transform[4] || 0) : 0,
+      y: Array.isArray(item.transform) ? Number(item.transform[5] || 0) : 0,
+    }))
+
+  if (!textItems.length) return ''
+
+  const sorted = textItems.sort((a, b) => Math.abs(b.y - a.y) > 2 ? b.y - a.y : a.x - b.x)
+  const lines = []
+  let currentLine = []
+  let currentY = null
+
+  for (const item of sorted) {
+    if (currentY === null || Math.abs(item.y - currentY) <= 2) {
+      currentLine.push(item)
+      currentY = currentY === null ? item.y : currentY
+      continue
+    }
+
+    lines.push(currentLine)
+    currentLine = [item]
+    currentY = item.y
+  }
+
+  if (currentLine.length) lines.push(currentLine)
+
+  return lines
+    .map((line) => line.sort((a, b) => a.x - b.x).map((item, index) => {
+      const previous = line[index - 1]
+      if (!previous) return item.text
+      const gap = item.x - previous.x
+      return `${gap > 24 ? '  ' : ' '}${item.text}`
+    }).join(''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 async function runOcrFromDataUrl(dataUrl) {
