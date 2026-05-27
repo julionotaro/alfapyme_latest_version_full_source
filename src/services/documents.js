@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { analyzeDocument, buildSimulatedOcrText } from '../domain/tyrion/index.js'
+import { analyzeDocument, buildCaseCanonicalData, buildExtractionRows, buildSimulatedOcrText } from '../domain/tyrion/index.js'
 import { inspectDocument } from '../lib/document-ingestion'
 import { logEvent } from './history'
 
@@ -122,6 +122,7 @@ export async function uploadDocument({ caseId, organizationId, file }) {
 
   if (error) throw error
 
+  await syncStructuredExtractionLayer(data)
   await supabase.rpc('sync_document_to_checklist', { p_document_id: data.id })
 
   await logEvent({
@@ -200,6 +201,8 @@ export async function updateDocumentExtraction(documentId, payload = {}) {
 
   if (error) throw error
 
+  await syncStructuredExtractionLayer(data)
+
   await logEvent({
     organizationId: data.organization_id,
     caseId: data.case_id,
@@ -215,4 +218,40 @@ export async function updateDocumentExtraction(documentId, payload = {}) {
   })
 
   return data
+}
+
+async function syncStructuredExtractionLayer(document) {
+  const extractionRows = buildExtractionRows(document)
+
+  try {
+    await supabase.from('document_field_extractions').delete().eq('document_id', document.id)
+    if (extractionRows.length) {
+      const { error: extractionError } = await supabase.from('document_field_extractions').insert(extractionRows)
+      if (extractionError) throw extractionError
+    }
+
+    const { data: caseDocs, error: docsError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('case_id', document.case_id)
+
+    if (docsError) throw docsError
+
+    const canonical = buildCaseCanonicalData(caseDocs || [])
+    const payload = {
+      case_id: document.case_id,
+      canonical_data: canonical.fields,
+      conflict_data: canonical.conflicts,
+      completeness: canonical.completeness,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: canonicalError } = await supabase.from('case_canonical_data').upsert(payload)
+    if (canonicalError) throw canonicalError
+  } catch (error) {
+    console.warn('structured_extraction_layer_sync_skipped', {
+      documentId: document?.id,
+      reason: error?.message || String(error),
+    })
+  }
 }

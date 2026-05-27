@@ -151,11 +151,30 @@ function cleanInlineValue(value = '') {
 function normalizePersonName(value = '') {
   const cleaned = cleanInlineValue(value)
     .replace(/^(adquirente|transmitente|solicitante|heredero|causante|fallecido|fallecida|titular)\s*[:.-]?\s*/i, '')
+    .replace(/\b(?:dni|nie|nif|pasaporte|matricula|bastidor|fecha|domicilio|identificador|num(?:ero)?\s*(?:de\s*)?(?:tramite|tasa|referencia))\b.*$/i, '')
     .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, '')
     .trim()
 
   if (!cleaned) return null
+  if (cleaned.length < 5) return null
+  if (/^[A-Z]$/.test(cleaned)) return null
   return cleaned
+}
+
+function normalizeIdentifier(value = '') {
+  return cleanInlineValue(value)
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z0-9/-]/gi, '')
+    .toUpperCase()
+}
+
+function looksLikePersonName(value = '') {
+  const cleaned = normalizePersonName(value)
+  if (!cleaned) return false
+  if (/\d/.test(cleaned)) return false
+  const tokens = cleaned.split(/\s+/).filter(Boolean)
+  if (tokens.length < 2) return false
+  return tokens.every((token) => token.length >= 2)
 }
 
 function pickFirstMatch(text, patterns = []) {
@@ -179,6 +198,36 @@ function extractDateByLabel(text, labels = []) {
   const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const patterns = escaped.map((label) => new RegExp(`(?:${label})[^\\d]{0,20}([0-3]?\\d[\\/.-][0-1]?\\d[\\/.-](?:20)?\\d{2})`, 'i'))
   return pickFirstMatch(text, patterns)
+}
+
+function extractValueByLabels(text, labels = [], { maxLen = 120, upper = false } = {}) {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const patterns = escaped.flatMap((label) => [
+    new RegExp(`(?:${label})\\s*(?:n[º°o.]?|numero|num\\.?|ref\\.?|referencia)?\\s*[:.-]?\\s*([A-Z0-9\\/-]{4,${maxLen}})`, 'i'),
+    new RegExp(`(?:${label})[^A-Z0-9]{0,12}([A-Z0-9\\/-]{4,${maxLen}})`, 'i'),
+  ])
+
+  const picked = pickFirstMatch(text, patterns)
+  if (!picked) return null
+  return upper ? normalizeIdentifier(picked) : cleanInlineValue(picked)
+}
+
+function extractNameNearDni(text, labels = []) {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const patterns = escaped.flatMap((label) => [
+    new RegExp(`(?:${label})[^\n]{0,60}?([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ]+(?:\\s+[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ]+){1,4})[^\n]{0,30}?(?:dni|nie|nif)`, 'i'),
+    new RegExp(`(?:${label})[^\n]{0,20}?(?:dni|nie|nif)[^\n]{0,30}?([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ]+(?:\\s+[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ]+){1,4})`, 'i'),
+  ])
+
+  const value = pickFirstMatch(text, patterns)
+  return looksLikePersonName(value) ? normalizePersonName(value) : null
+}
+
+function chooseBestName(...candidates) {
+  for (const candidate of candidates) {
+    if (looksLikePersonName(candidate)) return normalizePersonName(candidate)
+  }
+  return null
 }
 
 const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE'
@@ -277,11 +326,17 @@ function extractFields(rawText) {
     firstMatch(/(?:titular):\s*([^\n]{4,})/i, text)?.trim(),
     firstMatch(/(?:nombre):\s*([^\n]{4,})/i, text)?.trim(),
   ])
-  const buyerName = extractRoleValue(text, ['comprador', 'buyer', 'adquirente'])
-  const sellerName = extractRoleValue(text, ['vendedor', 'seller', 'transmitente'])
-  const ownerName = extractRoleValue(text, ['titular'])
-  const heirName = extractRoleValue(text, ['heredero', 'adjudicatario', 'adjudicataria', 'solicitante', 'adquirente'])
-  const deceasedName = extractRoleValue(text, ['causante', 'fallecido', 'fallecida', 'transmitente'])
+  const buyerName = chooseBestName(
+    extractRoleValue(text, ['comprador', 'buyer', 'adquirente']),
+    extractNameNearDni(text, ['comprador', 'buyer', 'adquirente']),
+  )
+  const sellerName = chooseBestName(
+    extractRoleValue(text, ['vendedor', 'seller', 'transmitente']),
+    extractNameNearDni(text, ['vendedor', 'seller', 'transmitente']),
+  )
+  const ownerName = chooseBestName(extractRoleValue(text, ['titular']), extractNameNearDni(text, ['titular']))
+  const heirName = chooseBestName(extractRoleValue(text, ['heredero', 'adjudicatario', 'adjudicataria', 'solicitante', 'adquirente']), extractNameNearDni(text, ['heredero', 'adjudicatario', 'adjudicataria', 'solicitante', 'adquirente']))
+  const deceasedName = chooseBestName(extractRoleValue(text, ['causante', 'fallecido', 'fallecida', 'transmitente']), extractNameNearDni(text, ['causante', 'fallecido', 'fallecida', 'transmitente']))
   const amount = firstMatch(/(?:importe|precio|total|valor declarado|importe a ingresar)[:\s€]*([0-9]+(?:[.,][0-9]{2})?)/i, text)
   const date = extractDateByLabel(text, ['fecha presentacion', 'fecha de presentacion', 'fecha']) || firstMatch(/\b([0-3]?\d[\/.-][0-1]?\d[\/.-](?:20)?\d{2})\b/, text)
   const deathDate = extractDateByLabel(text, ['fecha de defuncion', 'defuncion', 'fallecimiento'])
@@ -289,6 +344,8 @@ function extractFields(rawText) {
   const registrationDate = extractDateByLabel(text, ['fecha matriculacion', 'fecha de matriculacion'])
   const address = firstMatch(/(?:domicilio|direccion|dirección)[:\s]+([^\n,]{5,})/i, text)?.trim() || null
   const vin = firstMatch(/\b([a-hj-npr-z0-9]{17})\b/i, normalized)?.toUpperCase() || null
+  const caseReference = extractValueByLabels(text, ['numero de tramite', 'num tramite', 'tramite', 'expediente', 'referencia expediente'], { maxLen: 40, upper: true })
+  const feeReference = extractValueByLabels(text, ['numero de tasa', 'num tasa', 'tasa', 'nrc', 'justificante', 'referencia completa'], { maxLen: 40, upper: true })
   const issuer = extractIssuer(text, normalized)
   const formCodes = unique([
     ...[...normalized.matchAll(/\bmodelo\s*(620|621)\b/g)].map((match) => `modelo_${match[1]}`),
@@ -333,6 +390,8 @@ function extractFields(rawText) {
     registrationDate,
     address,
     vin,
+    caseReference,
+    feeReference,
     issuer,
     formCodes,
   }
@@ -429,7 +488,18 @@ export function analyzeDocument({ fileName = '', ocrText = '' }) {
     bestScore = 2
   }
 
-  const confidence = Math.max(0.55, Math.min(0.98, 0.52 + bestScore * 0.045 + (extractedFields.plates.length > 0 ? 0.06 : 0)))
+  const structuralSignals = [
+    extractedFields.plates.length > 0,
+    Boolean(extractedFields.vin),
+    Boolean(extractedFields.buyerName),
+    Boolean(extractedFields.sellerName),
+    Boolean(extractedFields.buyerId),
+    Boolean(extractedFields.sellerId),
+    Boolean(extractedFields.caseReference),
+    Boolean(extractedFields.feeReference),
+  ].filter(Boolean).length
+
+  const confidence = Math.max(0.55, Math.min(0.98, 0.5 + bestScore * 0.04 + structuralSignals * 0.035 + (extractedFields.plates.length > 0 ? 0.05 : 0)))
   const canonicalType = resolveCanonicalDocumentType(bestType)
   const tramites = inferTramiteHints(bestType, normalizedText)
 

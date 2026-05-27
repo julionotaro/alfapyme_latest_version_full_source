@@ -322,6 +322,11 @@ function getDetectedKeyDataLabel(selected, documents = []) {
     const fields = item?.ai_payload?.extracted_fields || {}
     return Boolean(fields.buyerName || fields.sellerName || fields.ownerName || fields.heirName || fields.deceasedName || fields.names?.length)
   })
+  const refs = documents.some((item) => {
+    const fields = item?.ai_payload?.extracted_fields || {}
+    return Boolean(fields.caseReference || fields.feeReference)
+  })
+  if (hasPlate && names && refs) return 'matrícula, partes y referencias'
   if (hasPlate && names) return 'matrícula y partes detectadas'
   if (hasPlate) return 'matrícula detectada'
   if (names) return 'partes detectadas'
@@ -416,6 +421,8 @@ function buildComparisonRows(documents = []) {
     buildFieldComparisonRow('DNI comprador', documents, (fields) => [fields.buyerId]),
     buildFieldComparisonRow('Vendedor', documents, (fields) => [fields.sellerName]),
     buildFieldComparisonRow('DNI vendedor', documents, (fields) => [fields.sellerId]),
+    buildFieldComparisonRow('Nº trámite', documents, (fields) => [fields.caseReference]),
+    buildFieldComparisonRow('Nº tasa / referencia', documents, (fields) => [fields.feeReference]),
   ]
 
   return rows.filter(Boolean)
