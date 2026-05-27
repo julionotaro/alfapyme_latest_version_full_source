@@ -4,6 +4,7 @@ import {
   fetchCases,
   fetchChecklist,
   fetchDocuments,
+  deleteLegacyNoiseDocuments,
   getDocumentSignedUrl,
   reconcileChecklistTemplate,
   updateCase,
@@ -59,7 +60,9 @@ export default function App() {
     if (!caseId) return
 
     try {
+      await deleteLegacyNoiseDocuments(caseId)
       const docs = await fetchDocuments(caseId)
+
       const items = await fetchChecklist(caseId)
       let currentCase = cases.find((item) => item.id === caseId) || selected
 
@@ -219,6 +222,15 @@ export default function App() {
 
   async function handleUploadFiles(files, preferredCase = null) {
     let targetCase = preferredCase || selected
+    const uniqueBatch = []
+    const seenKeys = new Set()
+
+    for (const file of files) {
+      const key = `${file.name}::${file.type}::${file.size}`
+      if (seenKeys.has(key)) continue
+      seenKeys.add(key)
+      uniqueBatch.push(file)
+    }
 
     if (!targetCase) {
       targetCase = await createProvisionalCase({
@@ -230,18 +242,27 @@ export default function App() {
       setCases((current) => [targetCase, ...current])
     }
 
-    for (const file of files) {
-      await uploadDocument({
+    let skippedDuplicates = 0
+
+    for (const file of uniqueBatch) {
+      const result = await uploadDocument({
         caseId: targetCase.id,
         organizationId: targetCase.organization_id,
         file,
       })
+
+      if (result?.skipped_duplicate) skippedDuplicates += 1
     }
 
     await loadCasesList()
     await loadCaseDetails(targetCase.id)
     setSelected(targetCase)
-    setMessage(`${files.length} documento(s) cargados en ${targetCase.public_id}.`)
+    const uploadedCount = uniqueBatch.length - skippedDuplicates
+    if (skippedDuplicates > 0) {
+      setMessage(`${uploadedCount} documento(s) cargados en ${targetCase.public_id}. ${skippedDuplicates} repetido(s) ignorado(s).`)
+      return
+    }
+    setMessage(`${uploadedCount} documento(s) cargados en ${targetCase.public_id}.`)
   }
 
   async function inspectUploadFiles(files) {

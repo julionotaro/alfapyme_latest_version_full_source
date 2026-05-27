@@ -10,8 +10,10 @@ export {
 
 export {
   fetchDocuments,
+  deleteLegacyNoiseDocuments,
   getDocumentSignedUrl,
   uploadDocument,
+  deleteDocument,
   updateDocumentExtraction,
 } from './documents'
 

@@ -23,6 +23,9 @@ export function WorkspaceView({
   const focusCases = activeCases
     .slice()
     .sort((a, b) => trayPriority(a) - trayPriority(b) || String(a.public_id).localeCompare(String(b.public_id)))
+  const crossChecks = tyrionAssessment?.automaticValidationResults || []
+  const comparisonRows = buildComparisonRows(documents)
+  const visibleDocuments = dedupeDocuments(documents)
 
   return (
     <div className="workspace-v2">
@@ -85,14 +88,14 @@ export function WorkspaceView({
           <>
             <div className="case-summary-hero card">
               <div className="hero-main">
-                <span className="eyebrow">Qué entendió la IA</span>
+                <span className="eyebrow">Estado del expediente</span>
                 <h4>{getInferredProcedureLabel(selected, tyrionAssessment)}</h4>
                 <p>{getInferenceSummary(selected, tyrionAssessment, documents)}</p>
               </div>
               <div className="hero-stats">
                 <div>
                   <span>Documentos cargados</span>
-                  <b>{documents.length}</b>
+                  <b>{visibleDocuments.length}</b>
                 </div>
                 <div>
                   <span>Confianza</span>
@@ -112,7 +115,7 @@ export function WorkspaceView({
               </div>
               <div className="ops-band-item">
                 <span>Conflictos</span>
-                <b>{shouldUseMvpDocumentReviewMode() ? `${tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables` : `${tyrionAssessment?.uiConflicts?.blockedCount || 0} bloqueantes · ${tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables`}</b>
+                <b>{shouldUseMvpDocumentReviewMode() ? `${tyrionAssessment?.uiConflicts?.items?.length || 0} a revisar` : `${tyrionAssessment?.uiConflicts?.blockedCount || 0} bloqueantes · ${tyrionAssessment?.uiConflicts?.reviewCount || 0} revisables`}</b>
               </div>
               <div className="ops-band-item">
                 <span>Siguiente paso</span>
@@ -141,7 +144,7 @@ export function WorkspaceView({
 
             <div className="workspace-clean-grid">
               <div className="card">
-                <h4>{shouldUseMvpDocumentReviewMode() ? 'Qué revisar ahora' : 'Qué falta para avanzar'}</h4>
+                <h4>Qué pasa realmente ahora</h4>
                 <div className="signal-list">
                   {buildMissingSignals({ checklist, tyrionAssessment, selected }).map((item) => (
                     <div key={item.label} className={`signal-item ${item.tone}`}>
@@ -153,8 +156,35 @@ export function WorkspaceView({
               </div>
 
               <div className="card">
+                <h4>Cotejo documental</h4>
+                {comparisonRows.length ? comparisonRows.map((row) => (
+                  <div className={`comparison-row ${row.status}`} key={row.label}>
+                    <div>
+                      <b>{row.label}</b>
+                      <small>{row.summary}</small>
+                    </div>
+                    <span className={`status-pill ${row.tone}`}>{row.badge}</span>
+                  </div>
+                )) : <p className="muted-line">Todavía no hay suficientes datos extraídos para cotejar con criterio.</p>}
+              </div>
+            </div>
+
+            <div className="workspace-clean-grid secondary-grid">
+              <div className="card">
+                <h4>Lectura y comparación</h4>
+                <div className="signal-list">
+                  {buildCrossCheckSignals(crossChecks).map((item) => (
+                    <div key={item.label} className={`signal-item ${item.tone}`}>
+                      <b>{item.label}</b>
+                      <small>{item.detail}</small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
                 <h4>Documentos cargados</h4>
-                {documents.length ? documents.map((document) => (
+                {visibleDocuments.length ? visibleDocuments.map((document) => (
                   <div className="doc-row" key={document.id}>
                     <div>
                       <b>{document.file_name}</b>
@@ -290,7 +320,7 @@ function getDetectedKeyDataLabel(selected, documents = []) {
   const hasPlate = Boolean(selected?.vehicle_plate) || documents.some((item) => item?.ai_payload?.extracted_fields?.plates?.length)
   const names = documents.some((item) => {
     const fields = item?.ai_payload?.extracted_fields || {}
-    return Boolean(fields.buyer_name || fields.seller_name || fields.names?.length)
+    return Boolean(fields.buyerName || fields.sellerName || fields.ownerName || fields.heirName || fields.deceasedName || fields.names?.length)
   })
   if (hasPlate && names) return 'matrícula y partes detectadas'
   if (hasPlate) return 'matrícula detectada'
@@ -366,6 +396,69 @@ function buildOperationalSignals({ selected, tyrionAssessment, selectedBusinessT
       detail: tyrionAssessment?.decision?.targetState ? humanReadableStatus(tyrionAssessment.decision.targetState, tyrionAssessment) : 'Sin sugerencia aún',
     },
   ]
+}
+
+function dedupeDocuments(documents = []) {
+  const seen = new Set()
+  return documents.filter((document) => {
+    const key = `${document.file_name}::${document.file_type}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function buildComparisonRows(documents = []) {
+  const rows = [
+    buildFieldComparisonRow('Matrícula', documents, (fields) => fields.plates || []),
+    buildFieldComparisonRow('Bastidor', documents, (fields) => (fields.vin ? [fields.vin] : [])),
+    buildFieldComparisonRow('Comprador', documents, (fields) => [fields.buyerName]),
+    buildFieldComparisonRow('DNI comprador', documents, (fields) => [fields.buyerId]),
+    buildFieldComparisonRow('Vendedor', documents, (fields) => [fields.sellerName]),
+    buildFieldComparisonRow('DNI vendedor', documents, (fields) => [fields.sellerId]),
+  ]
+
+  return rows.filter(Boolean)
+}
+
+function buildFieldComparisonRow(label, documents, picker) {
+  const perDocument = dedupeDocuments(documents)
+    .map((document) => ({
+      fileName: document.file_name,
+      values: uniqueValues(picker(document?.ai_payload?.extracted_fields || {})),
+    }))
+    .filter((item) => item.values.length)
+
+  if (!perDocument.length) return null
+
+  const unique = uniqueValues(perDocument.flatMap((item) => item.values))
+  const matches = unique.length <= 1
+  const badge = matches ? (perDocument.length > 1 ? 'coincide' : 'detectado') : 'contradicción'
+
+  return {
+    label,
+    status: matches ? 'ok' : 'conflict',
+    tone: matches ? 'success' : 'danger',
+    badge,
+    summary: perDocument.map((item) => `${item.fileName}: ${item.values.join(' · ')}`).join(' | '),
+  }
+}
+
+function buildCrossCheckSignals(validations = []) {
+  const relevant = validations.filter((item) => ['passed', 'failed'].includes(item.status)).slice(0, 5)
+  if (!relevant.length) {
+    return [{ label: 'Sin validaciones útiles todavía', detail: 'Falta extracción suficiente para que el cotejo diga algo serio.', tone: 'neutral' }]
+  }
+
+  return relevant.map((item) => ({
+    label: item.label,
+    detail: item.detail,
+    tone: item.status === 'failed' ? 'danger' : 'success',
+  }))
+}
+
+function uniqueValues(values = []) {
+  return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))]
 }
 
 function humanReadableChecklistStatus(item) {
